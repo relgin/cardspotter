@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>CardSpotter Options</title>
+  <link rel="stylesheet" type="text/css" href="options.css">
+</head>
+
+<body>
+	<div id="status1"></div>
+	<button id="save1">Save</button>
+	<button id="restore1">Restore Defaults</button>
+	<fieldset>
+    <legend>Search</legend>
+		<fieldset>
+		<legend>Expected card size</legend>
+		<p>
+		<input type="text" id="mincardsize" size="2">% Min card size relative to video height
+		</p>
+		<p>
+		<input type="text" id="maxcardsize" size="2">% Max card size relative to video height
+		</p>
+		</fieldset>
+		
+		<fieldset>
+		<legend>Score</legend>
+		<p>
+		<input type="text" id="goodscore" size="2">% Required score for Auto matches.
+		</p>
+		<p>
+		<input type="text" id="okscore" size="2">% Required score for Manual matches.
+		</p>
+		</fieldset>
+		
+		<fieldset>
+		<legend>CardPool</legend>
+		<p>
+		<textarea rows="5" cols="40" id="cardpool" style="resize: none;" data-role="none"></textarea>
+		</p>
+		</fieldset>
+	</fieldset>
+	 <fieldset>
+		<legend>Automatic tooltip (TV-Mode)</legend>
+		<p>
+		<input type="checkbox" id="autoscreen">Enable automatic tooltips<br>
+		<input type="text" id="automatchtimeout" size="3">Tooltip keep alive timer.<br>
+		<input type="text" id="automatchhistorysize" size="3">Size of auto match history (do not show again while in history)<br>
+		</p>
+		<fieldset>
+		<legend>Auto area</legend>
+		<p>
+		<input type="text" id="automatchx" size="3">X<br>
+		<input type="text" id="automatchy" size="3">Y<br>
+		<input type="text" id="automatchwidth" size="3">Width<br>
+		<input type="text" id="automatchheight" size="3">Height<br>
+		</p>
+		<p>
+		<input type="checkbox" id="autocolor"> Debug color auto area (Tip: move options tab to another window while tweaking)
+		</p>
+		</fieldset>
+	</fieldset>
+	
+	<fieldset>
+	<legend>Click search area</legend>
+	<p>
+	<input type="text" id="clickareax" size="3">X<br>
+	<input type="text" id="clickareay" size="3">Y<br>
+	<input type="text" id="clickareawidth" size="3">Width<br>
+	<input type="text" id="clickareaheight" size="3">Height<br>
+	</p>
+	<p>
+	<input type="checkbox" id="canvascolor"> Debug color click capture area (Tip: move options tab to another window while tweaking)
+	</p>
+	</fieldset>
+  <fieldset>
+    <legend>UI</legend>
+	  <fieldset>
+		<legend>Tooltip</legend>
+		<p>
+		<input type="checkbox" id="mousemodeenabled">Use manual tooltip
+		</p>
+		<p>
+		Show on: 
+		<select size="2" id="mousemode">
+		 <option value="click">Click</option>
+		 <option value="mouseover">MouseOver</option>
+		</select>
+		</p>
+		<p>
+		<input type="checkbox" id="mouseanchor">Anchor tooltip to mouse (fixed side otherwise)
+		</p>
+		<p>
+		Fixed Tooltip Anchor:
+		<select size="2" id="vertical">
+			<option value="top">Top</option>
+			<option value="bottom">Bottom</option>
+		</select>
+		<select size="2" id="horizontal">
+			<option value="left">Left</option>
+			<option value="right">Right</option>
+		</select>
+		</p>	
+		<p>		
+		<input type="text" id="offsetx" size="3">Offset X<br>
+		<input type="text" id="offsety" size="3">Offset Y<br>
+		<p>
+			<input type="checkbox" id="resetmouseoffset">Reset mouse offset on load (prevents tooltip from accidently ending up offscreen)
+			</p>
+		</p>
+		
+		<p>
+		<input type="text" id="detailsTargetWidth" size="3"> Tooltip width (default 300). 
+		</p>
+		<p>
+		<input type="checkbox" id="tooltiplogo"> Show CardSpotter logo
+		</p>
+		<p>
+		<input type="checkbox" id="showhistory"> Show Match history
+		</p>
+		<p>
+		<input type="checkbox" id="tooltipscryfall"> Show Scryfall link (card name)
+		</p>
+		<p>
+			<input type="checkbox" id="showsavebutton"> Show Save Button for search history
+			</p>
+	  </fieldset>
+  </fieldset>
+
+  <fieldset>
+    <legend>Debug</legend>
+	<p>
+	<input type="checkbox" id="debugview"> Show debug information
+	</p>
+	</fieldset>
+
+  <div id="status2"></div>
+  <button id="save2">Save</button>
+  <script src="options.js"></script>
+</body>
+</html>

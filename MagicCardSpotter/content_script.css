@@ -1,0 +1,249 @@
+ul.CardSpotter, li.CardSpotter
+{
+	list-style-type: none;
+	padding: 0;
+	margin: 0;
+	max-width: 224px;
+	width: 224px;
+	text-align: center;
+	font-family: Roboto,Arial,Helvetica,sans-serif;
+	color:#ccc;
+	font-size: 13px;
+}
+
+#LinkList
+{
+	/* padding-left: 10px; */
+	/* padding-right: 10px; */
+	max-width: 204px;
+	margin: auto;
+	white-space: nowrap;
+}
+
+div.HistoryList
+{
+	position: absolute;
+	top: 80px;
+	left: 32px;
+}
+
+ul.HistoryList
+{
+/*	float:left;
+	max-width: 32px;
+	list-style-type: none;*/
+	padding: 0;
+	margin: 0;
+}
+
+li.HistoryList
+{
+	max-width: 128px;
+	height: 44px;
+	padding: 0;
+	margin: 0;
+}
+img.HistoryList
+{
+	width: 32px;
+	height: 44px;
+}
+
+li.Move
+{
+	cursor:move;	
+}
+
+#namediv
+{
+	position: relative;
+	z-index: 2147483647;
+	right: 0px;
+	top: 0px;
+}
+
+#CardSpotterName
+{
+	display: block;
+	padding-top: 5px;
+	margin-left: 5%;
+	margin-right: 5%;
+	margin-bottom: -16px;
+	width: 90%;
+	max-width: 90%;
+}
+
+#LinkList li
+{
+	/* height:20px; */
+	font-size: 16px;
+	display: table-cell;
+	overflow:hidden;
+	white-space: nowrap;
+	/* min-width: 10%; */
+	/*max-width: 25%;*/
+	/* float:left; */
+}
+
+b.CardSpotter
+{
+	text-align: center;
+	font-family: Roboto,Arial,Helvetica,sans-serif;
+	font-size: 18px;
+	color:#ccc;
+	padding: 0;
+	margin: 0;
+}
+
+img.CardSpotter
+{
+    padding-top: 10px;
+    padding-bottom: 0px;
+	user-drag: none; 
+	user-select: none;
+	-moz-user-select: none;
+	-webkit-user-drag: none;
+	-webkit-user-select: none;
+	-ms-user-select: none;
+	border-radius: 19px;
+}
+
+a.CardSpotter
+{
+	display: inline-block;
+    width: 100%;
+	height: 100%;
+	background-color : #111111;
+	border : 1px;
+	box-shadow:0px 0px 0px 1px black inset;
+	border-color: black;
+    color:#ddd;
+}
+
+div.CardSpotterVertical
+{
+    position: absolute;
+    top: 28px;
+    right: -28px;
+    -webkit-transform:rotate(90deg);
+    white-space:nowrap;
+	text-align: center;
+    height:15px;
+    max-height:15px;
+    width:70px;
+    max-width:70px;
+	color:#167ac6;
+	background-color:black;
+	border-radius: 0px 0px 5px 5px;
+	z-index: 2147483647;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	font-size: 100%;
+	display: block;
+	font-family: Roboto,Arial,Helvetica,sans-serif;
+	line-height: 1.3;
+}
+
+.CardSpotterOverlay
+{
+	z-index: 2147483647;
+	padding: 0px;
+	margin: 0px;
+	bottom: 0px;
+}
+
+div.CardSpotterBottom
+{
+	position: absolute;
+	top: 0px;
+	display:block;
+	width: 100%;
+}
+
+@keyframes menubiganim
+{
+    0%   {transform: scale(3, 3); transform-origin: right top;}
+    25%  {transform: scale(3, 3); transform-origin: right top;}
+    100% {transform: scale(1, 1); transform-origin: right top;}
+}
+
+.CardSpotterMenuBig {
+    animation-name: menubiganim;
+    animation-duration: 3s;
+}
+
+#CardSpotterMenuParent
+{
+	position: relative;
+}
+
+#CardSpotterMenu img
+{
+	border: none;
+    max-width: 100%;
+    margin-top: 4px;
+}
+
+
+#CardSpotterMenu
+{
+	margin: 0;
+	position: absolute;
+	right: 0px;
+	background: black;
+	border-radius: 5px 0px 0px 5px;
+	border-color: white;
+	border-style: solid;
+	padding-bottom: 6px;
+	padding-left: 3px;
+	padding-right: 3px;
+	min-height: 18px;
+	height: 18px;
+	max-height: 18px;
+	border-top-width: 1px;
+	border-bottom-width: 1px;
+	border-left-width: 1px;
+	border-right-width: 0px;
+	font-family: Roboto,Arial,Helvetica,sans-serif;
+	box-sizing: content-box;
+}
+
+.mdi
+{
+	color:grey;
+}
+
+.mdi-light
+{
+	color:lightblue;
+	text-shadow: 0 0 2px #0000FF;
+}
+
+.mdi:hover
+{
+	color:white;
+	text-shadow: 1px 1px 4px #FFFFFF;
+}
+
+select.CardSpotterMenu
+{
+	/*filter: invert(100%);*/
+	border-color:white;
+	background-color:black;
+	font-size: 13px;
+	color:white;
+	font-family: Roboto,Arial,Helvetica,sans-serif;
+	/* margin-bottom: 3px; */
+	position: relative;
+	top: -3px;
+	height: 19px;
+}
+
+p.CardSpotterOverlay
+{
+	width: 70px;
+	height: 30px;
+	background-color:white;
+	color:#167ac6;
+}
