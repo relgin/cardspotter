@@ -6,6 +6,9 @@ It works by grabbing data from HTML5 video, extracting the clicked card using Op
 
 [50s demo recorded for 2.0](https://www.youtube.com/watch?v=-vKsLunV8Kg)
 
+
+How to modify CardSpotter
+=======
 If you wish to modify anything **but** the WebAssembly
 1. Clone the repository
 2. Made the desired changes in the extension folder (MagicCardSpotter)
