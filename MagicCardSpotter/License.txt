@@ -1,0 +1,33 @@
+Original work Copyright (c) 2017 CardSpotter. All rights reserved.
+
+NO WARRANTIES. THE AUTHOR OF THIS SOFTWARE EXPRESSLY DISCLAIMS ANY WARRANTY FOR THE SOFTWARE PRODUCT. 
+THE SOFTWARE PRODUCT AND ANY RELATED DOCUMENTATION IS PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, 
+EITHER EXPRESS OR IMPLIED, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTIES OR MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE, OR NONINFRINGEMENT. THE ENTIRE RISK ARISING OUT OF USE OR PERFORMANCE 
+OF THE SOFTWARE PRODUCT REMAINS WITH YOU.
+
+NO LIABILITY FOR DAMAGES. IN NO EVENT SHALL THE AUTHOR OF THIS SOFTWARE BE LIABLE FOR ANY SPECIAL, 
+CONSEQUENTIAL, INCIDENTAL OR INDIRECT DAMAGES WHATSOEVER (INCLUDING, WITHOUT LIMITATION, DAMAGES FOR 
+LOSS OF BUSINESS PROFITS, BUSINESS INTERRUPTION, LOSS OF BUSINESS INFORMATION, OR ANY OTHER PECUNIARY LOSS) 
+ARISING OUT OF THE USE OF OR INABILITY TO USE THIS PRODUCT, EVEN IF THE AUTHOR OF THIS SOFTWARE IS AWARE 
+OF THE POSSIBILITY OF SUCH DAMAGES AND KNOWN DEFECTS.
+=============================================================================
+
+This project also contains
+=============================================================================
+OpenCV http://opencv.org/
+
+License Agreement
+For Open Source Computer Vision Library
+(3-clause BSD License)
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+Neither the names of the copyright holders nor the names of the contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+This software is provided by the copyright holders and contributors “as is” and any express or implied warranties, including, but not limited to, the implied warranties of merchantability and fitness for a particular purpose are disclaimed. In no event shall copyright holders or contributors be liable for any direct, indirect, incidental, special, exemplary, or consequential damages (including, but not limited to, procurement of substitute goods or services; loss of use, data, or profits; or business interruption) however caused and on any theory of liability, whether in contract, strict liability, or tort (including negligence or otherwise) arising in any way out of
+the use of this software, even if advised of the possibility of such damage.
+
+=============================================================================
+Wizards of the Coast, Magic: The Gathering, and their logos are trademarks of Wizards of the Coast LLC in the United States and other countries. © 2017 Wizards. All Rights Reserved. CardSpotter is not affiliated with, endorsed, sponsored, or specifically approved by Wizards of the Coast LLC. This software may use the trademarks and other intellectual property of Wizards of the Coast LLC, which is permitted under Wizards' Digital Marketing Asset Policy (http://wpn.wizards.com/en/document/digital-marketing-asset-policy). For more information about Wizards of the Coast or any of Wizards' trademarks or other intellectual property, please visit their website at (http://www.wizards.com).
+=============================================================================
+
