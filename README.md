@@ -1,4 +1,4 @@
-![CardSpotter](https://raw.githubusercontent.com/relgin/cardspotter/master/Assets/CardSpotterHeader.png)=======
+![CardSpotter](https://raw.githubusercontent.com/relgin/cardspotter/master/Assets/CardSpotterHeader.png)
 CardSpotter is a browser extension that show automatic Magic:The Gathering card image tooltips for <video> streams. Tooltip shows the card image with a scryfall link.
 
 It works by grabbing data from HTML5 video, extracting the clicked card using OpenCV and then finding the best match from a database using image hashing.
