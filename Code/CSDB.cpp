@@ -288,6 +288,7 @@ void ScryfallBuild()
 {
 	CardDatabase database;
 
+	_mkdir("scryfall");
 	const char* scryfallSets = "scryfall/scryfallsets.json";
 	std::remove(scryfallSets);
 	if (!fileExists(scryfallSets) && filesize(scryfallSets) < 100 && !CurlUrlToFile(scryfallSets, "https://api.scryfall.com/sets", 10))
@@ -348,7 +349,6 @@ void ScryfallBuild()
 			}
 		}
 
-		_mkdir("scryfall");
 		sprintf(dir, "scryfall/s%s", code);
 		_mkdir(dir);
 

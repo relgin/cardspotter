@@ -1,0 +1,7 @@
+scryfall/*
+x64/*
+Code/emsdk/
+*.sdf
+*.opensdf
+*.user
+.vs/ThaProject/v14/.suo

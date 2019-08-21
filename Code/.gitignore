@@ -1,2 +1,7 @@
 cardspotter.wasm
 cardspotter.js
+curl-7.46.0/*
+rapidjson-master/*
+emsdk/*
+opencv-4.0.1/*
+x64/*

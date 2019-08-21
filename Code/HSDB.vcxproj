@@ -23,6 +23,7 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>HSDB</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <ProjectName>CSDB</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -134,7 +135,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>USE_LZMA; _CRT_SECURE_NO_WARNINGS;HAVE_PNG;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CURL_STATICLIB;USE_LZMA; _CRT_SECURE_NO_WARNINGS;HAVE_PNG;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(SolutionDir)Code\rapidjson-master\include;$(SolutionDir)Code\curl-7.46.0\include;$(SolutionDir)Code\opencv-4.0.1\include\;$(SolutionDir)\opencv\sources\3rdparty\libpng;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
@@ -145,15 +146,16 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)\curl-7.46.0\build\Win64\VC14\DLL Release - DLL Windows SSPI;$(SolutionDir)\opencv\output\3rdparty\lib\Release;$(SolutionDir)\opencv\output\lib\Release;$(SolutionDir)$(Platform)\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libcurl.lib;CardSpotterLib.lib;opencv_core401.lib;opencv_imgproc401.lib;opencv_features2d401.lib;opencv_imgcodecs401.lib;IlmImf.lib;libpng.lib;zlib.lib;winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)Code\curl-7.46.0\build\Win64\VC14\LIB Release - DLL Windows SSPI;$(SolutionDir)Code\opencv-4.0.1\lib\Release;$(SolutionDir)$(Platform)\$(Configuration)\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libcurl.lib;CardSpotterLib.lib;opencv_core401.lib;opencv_imgproc401.lib;opencv_features2d401.lib;opencv_imgcodecs401.lib;IlmImf.lib;libpng.lib;zlib.lib;winmm.lib;wldap32.lib;crypt32.lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions>/ignore:4099 %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="HSDB.cpp" />
+    <ClCompile Include="CSDB.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CardCurl.h" />
