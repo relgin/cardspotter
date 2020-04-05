@@ -32,6 +32,28 @@ public:
         return 1;
     }
 
+    void BuildResult(val& rv, const Match &match)
+    {
+        // This vector will hold the points of recognized image
+        std::vector<cv::Point2f> rectpoints;
+        rectpoints.resize(4);
+        match.myInput.myRect.points(&rectpoints[0]);
+        // I don't know why we need this...
+        rv.set("name", val(match.myDatabaseCard->myCardName));
+        rv.set("id", val(match.myDatabaseCard->myCardId));
+        rv.set("score", val((int)match.myScore[0]));
+        rv.set("set", val(match.myDatabaseCard->mySetCode));
+        rv.set("url", val(match.myDatabaseCard->myImgCoreUrl));
+        // The rectangle in the image where the card was found
+        rv.set("x1", val((int)rectpoints[0].x));
+        rv.set("x2", val((int)rectpoints[1].x));
+        rv.set("x3", val((int)rectpoints[2].x));
+        rv.set("x4", val((int)rectpoints[3].x));
+        rv.set("y1", val((int)rectpoints[0].y));
+        rv.set("y2", val((int)rectpoints[1].y));
+        rv.set("y3", val((int)rectpoints[2].y));
+        rv.set("y4", val((int)rectpoints[3].y));
+    }
     val AddScreen(const int &addr, int length, const size_t width, const size_t height)
     {
         uint8_t *data = reinterpret_cast<uint8_t *>(addr);
@@ -39,28 +61,11 @@ public:
         const bool success = query.AddScreenAndPrint(data, length, width, height, r);
         // This is the JS object value returned to JS
         val rv(val::object());
-        // This vector will hold the points of recognized image
-        std::vector<cv::Point2f> rectpoints;
-        rectpoints.resize(4);
+        rv.set("success", val(success));
+        rv.set("isautomatch", val(true));
         if (success)
         {
-            const Match &match = r.myMatch.myList[0];
-            match.myInput.myRect.points(&rectpoints[0]);
-            // I don't know why we need this...
-            rv.set("name", val(match.myDatabaseCard->myCardName));
-            rv.set("id", val(match.myDatabaseCard->myCardId));
-            rv.set("score", val((int)match.myScore[0]));
-            rv.set("set", val(match.myDatabaseCard->mySetCode));
-            rv.set("url", val(match.myDatabaseCard->myImgCoreUrl));
-            // The rectangle in the image where the card was found
-            rv.set("x1", val((int)rectpoints[0].x));
-            rv.set("x2", val((int)rectpoints[1].x));
-            rv.set("x3", val((int)rectpoints[2].x));
-            rv.set("x4", val((int)rectpoints[3].x));
-            rv.set("y1", val((int)rectpoints[0].y));
-            rv.set("y2", val((int)rectpoints[1].y));
-            rv.set("y3", val((int)rectpoints[2].y));
-            rv.set("y4", val((int)rectpoints[3].y));
+            BuildResult(rv, r.myMatch.myList[0]);
         }
         return rv;
     }
@@ -72,28 +77,11 @@ public:
         const bool success = query.FindCardInRoiAndPrint(data, length, width, height, r);
         // This is the JS object value returned to JS
         val rv(val::object());
-        // This vector will hold the points of recognized image
-        std::vector<cv::Point2f> rectpoints;
-        rectpoints.resize(4);
+        rv.set("success", val(success));
+        rv.set("isautomatch", val(false));
         if (success)
         {
-            const Match &match = r.myMatch.myList[0];
-            match.myInput.myRect.points(&rectpoints[0]);
-            // I don't know why we need this...
-            rv.set("name", val(match.myDatabaseCard->myCardName));
-            rv.set("id", val(match.myDatabaseCard->myCardId));
-            rv.set("score", val((int)match.myScore[0]));
-            rv.set("set", val(match.myDatabaseCard->mySetCode));
-            rv.set("url", val(match.myDatabaseCard->myImgCoreUrl));
-            // The rectangle in the image where the card was found
-            rv.set("x1", val((int)rectpoints[0].x));
-            rv.set("x2", val((int)rectpoints[1].x));
-            rv.set("x3", val((int)rectpoints[2].x));
-            rv.set("x4", val((int)rectpoints[3].x));
-            rv.set("y1", val((int)rectpoints[0].y));
-            rv.set("y2", val((int)rectpoints[1].y));
-            rv.set("y3", val((int)rectpoints[2].y));
-            rv.set("y4", val((int)rectpoints[3].y));
+            BuildResult(rv, r.myMatch.myList[0]);
         }
         return rv;
     }

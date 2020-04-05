@@ -10,6 +10,8 @@ extern "C" {
 
 	void PostResults(Result r, bool success, bool autoMatch)
 	{
+		printf("PostResults %s", (success)?"TRUE":"FALSE");
+
 		const char* cardId = "";
 		const char* cardName = "";
 		int score = 1024;
@@ -29,18 +31,30 @@ extern "C" {
 			cardName = match.myDatabaseCard->myCardName.c_str();
 			score = (int)match.myScore[0];
 			setCode = match.myDatabaseCard->mySetCode.c_str();
+			printf("PostResults success %s", cardId);
 		}
 	
 		EM_ASM_INT({
-			if (myActiveTabId<0) return;
+			if (myActiveTabId<0)
+			{
+				console.log("No active tab");
+				return;
+			}
+			
+			console.log("Variables");
+			console.log(AsciiToString($0));
+			console.log(AsciiToString($1));
+			console.log(AsciiToString($2));
+			console.log(AsciiToString($15));
+			console.log("Sending");
 			chrome.tabs.sendMessage(myActiveTabId,
 			{
 				cmd: "showresults",
 				results : [
 					{
-						multiverseid : Module.Pointer_stringify($0),
-						name : Module.Pointer_stringify($1),
-						url : Module.Pointer_stringify($2),
+						multiverseid : AsciiToString($0),
+						name : AsciiToString($1),
+						url : AsciiToString($2),
 						score : $3,
 						px0 : $4,
 						py0 : $5,
@@ -53,10 +67,11 @@ extern "C" {
 						pointx : $12,
 						pointy : $13,
 						isautomatch : ($14==1)?true:false,
-						setcode : Module.Pointer_stringify($15)
+						setcode : AsciiToString($15)
 					}
 				]
 			});
+			console.log("Sent");
 
 		}, cardId, cardName, url, score,
 		(int)rectpoints[0].x, (int)rectpoints[0].y,
@@ -70,6 +85,7 @@ extern "C" {
 	
 	void FindCard(unsigned char* aBuffer, int aBufferLength, int aWidth, int aHeight, int px, int py)
 	{
+		printf("FindCard %i\n", aBufferLength);
 		Result r;
 		const bool success = query.FindCardInRoiAndPrint(aBuffer, aBufferLength, aWidth, aHeight, r);
 		query.myPoint.x = px - aWidth/2;
@@ -118,7 +134,7 @@ extern "C" {
 	  gDatabase.LoadString(&fetch->data[0]);
 	  emscripten_fetch_close(fetch);
 	  
-	  printf("CardSpotter: download Succeeded\n");
+	  printf("CardSpotter: Loaded database with %i cards Succeeded\n", gDatabase.myCardCount);
 	  EM_ASM(loadingDone(););
 	}
 	

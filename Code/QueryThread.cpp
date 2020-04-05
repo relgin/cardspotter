@@ -12,17 +12,17 @@
 #define SLEEP(MS) Sleep((MS))
 #else
 #include <unistd.h>
-#define SLEEP(MS) usleep((MS)*1000)
+#define SLEEP(MS) usleep((MS) * 1000)
 #endif
 
-extern const char *appData;
+extern const char* appData;
 extern std::mutex g_resultsMutex;
 
 #ifndef max
-#define max(a, b) (((a) > (b)) ? (a) : (b))
+#define max(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 #ifndef min
-#define min(a, b) (((a) < (b)) ? (a) : (b))
+#define min(a,b) (((a) < (b)) ? (a) : (b))
 #endif
 
 enum OPERATOR
@@ -34,7 +34,7 @@ enum OPERATOR
 // #pragma optimize("",off)
 
 // http://stackoverflow.com/a/30418912/5008845
-cv::Rect findMinRect(const cv::Mat1b &src)
+cv::Rect findMinRect(const cv::Mat1b& src)
 {
 	cv::Mat1f W(src.rows, src.cols, float(0));
 	cv::Mat1f H(src.rows, src.cols, float(0));
@@ -48,8 +48,8 @@ cv::Rect findMinRect(const cv::Mat1b &src)
 		{
 			if (src(r, c) == 0)
 			{
-				H(r, c) = 1.f + ((r > 0) ? H(r - 1, c) : 0);
-				W(r, c) = 1.f + ((c > 0) ? W(r, c - 1) : 0);
+				H(r, c) = 1.f + ((r>0) ? H(r - 1, c) : 0);
+				W(r, c) = 1.f + ((c>0) ? W(r, c - 1) : 0);
 			}
 
 			float minw = W(r, c);
@@ -69,13 +69,14 @@ cv::Rect findMinRect(const cv::Mat1b &src)
 	return maxRect;
 }
 
-cv::RotatedRect largestRectInNonConvexPoly(std::vector<cv::Point> ptz) //const cv::Mat1b& src)
+
+cv::RotatedRect largestRectInNonConvexPoly(std::vector<cv::Point> ptz)//const cv::Mat1b& src)
 {
 	// Create a matrix big enough to not lose points during rotation
-	// 	std::vector<cv::Point> ptz;
-	// 	cv::findNonZero(src, ptz);
-	cv::Rect bbox = cv::boundingRect(ptz); //224,215
-	for (cv::Point &pt : ptz)
+// 	std::vector<cv::Point> ptz;
+// 	cv::findNonZero(src, ptz);
+	cv::Rect bbox = cv::boundingRect(ptz);//224,215
+	for (cv::Point& pt : ptz)
 	{
 		pt.x -= bbox.x;
 		pt.y -= bbox.y;
@@ -92,7 +93,7 @@ cv::RotatedRect largestRectInNonConvexPoly(std::vector<cv::Point> ptz) //const c
 	// For each angle
 	for (int angle = 0; angle < 90; angle += 1)
 	{
-		// 		cout << angle << endl;
+// 		cout << angle << endl;
 
 		// Rotate the image
 		cv::Mat R = getRotationMatrix2D(cv::Point(maxdim, maxdim), angle, 1);
@@ -115,14 +116,14 @@ cv::RotatedRect largestRectInNonConvexPoly(std::vector<cv::Point> ptz) //const c
 		// If best, save result
 		if (r.area() > bestRect.area())
 		{
-			bestRect = r + box.tl(); // Correct the crop displacement
+			bestRect = r + box.tl();    // Correct the crop displacement
 			bestAngle = angle;
 		}
 	}
 
 	// Apply the inverse rotation
 	cv::Mat Rinv = cv::getRotationMatrix2D(cv::Point(maxdim, maxdim), -bestAngle, 1);
-	std::vector<cv::Point> rectPoints{bestRect.tl(), cv::Point(bestRect.x + bestRect.width, bestRect.y), bestRect.br(), cv::Point(bestRect.x, bestRect.y + bestRect.height)};
+	std::vector<cv::Point> rectPoints{ bestRect.tl(), cv::Point(bestRect.x + bestRect.width, bestRect.y), bestRect.br(), cv::Point(bestRect.x, bestRect.y + bestRect.height) };
 	std::vector<cv::Point> rotatedRectPoints;
 	cv::transform(rectPoints, rotatedRectPoints, Rinv);
 
@@ -142,14 +143,27 @@ static cv::Mat debugArea;
 const int VIDEOWIDTH = 1280;
 const int VIDEOHEIGHT = 720;
 
-Query::Query(CardDatabase &aCardDatabase)
-	: myCardDatabase(aCardDatabase), myToplistSize(1), myMaxRotation(-1.f), myLastOkMatch(0), myAutoMatchTimeout(3000), myGoodMatchScore(170), myOkMatchScore(270), myAlreadyMatchedMaxSize(12), myIsAutoMatch(false), mydecodedScreen(VIDEOWIDTH, VIDEOHEIGHT, CV_8UC4), myScreenScale(1.0f), myMinCardHeightRelative(0.05f), myMaxCardHeightRelative(0.2f)
+Query::Query(CardDatabase& aCardDatabase)
+	:myCardDatabase(aCardDatabase)
+, myToplistSize(1)
+, myMaxRotation(-1.f)
+, myLastOkMatch(0)
+, myAutoMatchTimeout(3000)
+, myGoodMatchScore(170)
+, myOkMatchScore(270)
+, myAlreadyMatchedMaxSize(12)
+, myIsAutoMatch(false)
+, myDecodedScreenBuffer(VIDEOWIDTH, VIDEOHEIGHT, CV_8UC4)
+, myScreenScale(1.0f)
+, myMinCardHeightRelative(0.05f)
+, myMaxCardHeightRelative(0.2f)
 {
+
 }
 
-std::string Query::TestBuffer(unsigned char *aBuffer, int aWidth, int aHeight)
+std::string Query::TestBuffer(unsigned char* aBuffer, int aWidth, int aHeight)
 {
-	cv::Mat primeCase = cv::Mat(aWidth, aHeight, CV_8UC4, (void *)aBuffer);
+	cv::Mat primeCase = cv::Mat(aWidth, aHeight, CV_8UC4, (void*)aBuffer);
 	cv::Mat bgr;
 	cv::cvtColor(primeCase, bgr, cv::COLOR_RGBA2BGR);
 
@@ -163,7 +177,7 @@ std::string Query::TestBuffer(unsigned char *aBuffer, int aWidth, int aHeight)
 	return "fail";
 }
 
-bool Query::TestFile(const std::string &file, bool aMatchingNameOnly /*=false*/)
+bool Query::TestFile(const std::string &file, bool aMatchingNameOnly/*=false*/)
 {
 	const int start = (int)file.find_last_of("/") + 1;
 	int end = (int)file.find_last_of(".");
@@ -182,7 +196,7 @@ bool Query::TestFile(const std::string &file, bool aMatchingNameOnly /*=false*/)
 		return false;
 
 	Result result;
-	// 	myCardDatabase.myCurrentFormat = CardDatabase::STANDARD;
+// 	myCardDatabase.myCurrentFormat = CardDatabase::STANDARD;
 
 	//   				query.testname = "Street Wraith";
 	UpdateSearchSettings();
@@ -204,7 +218,7 @@ bool Query::TestFile(const std::string &file, bool aMatchingNameOnly /*=false*/)
 		testname = name;
 		CardList set;
 		myCardDatabase.GetCardsByName(testname, set);
-		std::vector<const CardList *> sets;
+		std::vector<const CardList*> sets;
 		sets.push_back(&set);
 
 		FindCardInRoiAndPrint(primeCase, sets, extraResult);
@@ -237,19 +251,18 @@ bool Query::TestFile(const std::string &file, bool aMatchingNameOnly /*=false*/)
 			std::cout << "Best:" << result.myMatch.myList[0].myScore[0] << " Quick:" << result.myMatch.myList[0].myScore[1] << " " << result.myMatch.myList[0].myDatabaseCard->myCardName;
 		}
 	}
-	std::cout << std::endl
-			  << std::endl;
+	std::cout << std::endl << std::endl;
 	return fIndex >= 0 && fIndex < 4;
 }
 
-int Query::SetSetting(const std::string &key, const std::string &value)
+int Query::SetSetting(const std::string& key, const std::string& value)
 {
 	if (strcmp(key.c_str(), "mincardsize") == 0)
 	{
 		int minSize = atoi(value.c_str());
 		if (minSize >= 0 && minSize <= 100)
 		{
-			myMinCardHeightRelative = float(minSize) / 100.f;
+			myMinCardHeightRelative = float(minSize)/100.f;
 			return (int)(100 * myMinCardHeightRelative);
 		}
 	}
@@ -295,7 +308,7 @@ int Query::SetSetting(const std::string &key, const std::string &value)
 inline bool Deviates(cv::Vec3b value, int someValue)
 {
 	int thresh = 5;
-	for (int i = 0; i < 3; ++i)
+	for (int i = 0; i<3; ++i)
 	{
 		if (std::abs(value(i) - someValue) > thresh)
 		{
@@ -307,7 +320,7 @@ inline bool Deviates(cv::Vec3b value, int someValue)
 inline bool Deviates(cv::Vec3b value, cv::Vec3b anotherValue)
 {
 	int thresh = 5;
-	for (int i = 0; i < 3; ++i)
+	for (int i = 0; i<3; ++i)
 	{
 		if (std::abs(value(i) - anotherValue(i)) > thresh)
 		{
@@ -335,7 +348,7 @@ inline bool IsDark(cv::Vec3b value)
 	return (r < dark) && (g < dark) && (b < dark);
 }
 
-inline bool IsDark(const cv::Mat &aMat, int aStartX, int anEndX, int aStartY, int anEndY)
+inline bool IsDark(const cv::Mat& aMat, int aStartX, int anEndX, int aStartY, int anEndY)
 {
 	int totalPixels = ((anEndX - aStartX) + 1) * ((anEndY - aStartY) + 1);
 	int darkness = 0;
@@ -354,7 +367,7 @@ inline bool IsDark(const cv::Mat &aMat, int aStartX, int anEndX, int aStartY, in
 	return darkness * 10 > totalPixels * 9;
 }
 
-inline bool HasColor(const cv::Mat &aMat, int aStartX, int anEndX, int aStartY, int anEndY)
+inline bool HasColor(const cv::Mat& aMat, int aStartX, int anEndX, int aStartY, int anEndY)
 {
 	int totalPixels = ((anEndX - aStartX) + 1) * ((anEndY - aStartY) + 1);
 	int color = 0;
@@ -381,32 +394,32 @@ inline bool HasColor(const cv::Mat &aMat, int aStartX, int anEndX, int aStartY, 
 	return false;
 }
 
-cv::Mat getRotatedRectImage(const cv::RotatedRect &aRect, const cv::Mat &anImage)
+cv::Mat getRotatedRectImage(const cv::RotatedRect& aRect, const cv::Mat& anImage)
 {
 	// get angle and size from the bounding box
 	float angle = aRect.angle;
 	cv::Size rect_size((int)std::ceil(aRect.size.width), (int)std::ceil(aRect.size.height));
 
-	// 	const bool useRect = std::abs(fmod(angle, 90.f)) < 0.1f;
-	// 	if (useRect)
-	// 	{
-	// 		if (angle == 0.f)
-	// 		{
-	// 			return cv::Mat(anImage, cv::Rect(aRect.center.x - rect_size.width / 2, aRect.center.y - rect_size.height / 2, rect_size.width, rect_size.height));
-	// 		}
-	// 	}
+// 	const bool useRect = std::abs(fmod(angle, 90.f)) < 0.1f;
+// 	if (useRect)
+// 	{
+// 		if (angle == 0.f)
+// 		{
+// 			return cv::Mat(anImage, cv::Rect(aRect.center.x - rect_size.width / 2, aRect.center.y - rect_size.height / 2, rect_size.width, rect_size.height));
+// 		}
+// 	}
 
-	// 	// thanks to http://felix.abecassis.me/2011/10/opencv-rotation-deskewing/
-	// 	if (aRect.angle < -45.) {
-	// 		angle += 90.0;
-	// 		std::swap(rect_size.width, rect_size.height);
-	// 	}
+// 	// thanks to http://felix.abecassis.me/2011/10/opencv-rotation-deskewing/
+// 	if (aRect.angle < -45.) {
+// 		angle += 90.0;
+// 		std::swap(rect_size.width, rect_size.height);
+// 	}
 	/************************************************************************/
 	/* EXTEND SIZE FROM TOP TO BOTTOM TO MATCH EXPECTED                     */
 	/************************************************************************/
 	// get the rotation matrix
 	cv::Mat rotation = cv::getRotationMatrix2D(aRect.center, angle, 1.0);
-	cv::Mat rotated(rect_size, anImage.type(), cv::Scalar(122, 122, 122, 255));
+	cv::Mat rotated(rect_size, anImage.type(), cv::Scalar(122,122,122,255));
 
 	double wdiff = (double)((aRect.center.x - ((double)(rotated.cols) / 2.0)));
 	double hdiff = (double)((aRect.center.y - ((double)(rotated.rows) / 2.0)));
@@ -422,20 +435,20 @@ cv::Mat getRotatedRectImage(const cv::RotatedRect &aRect, const cv::Mat &anImage
 	return rotated;
 }
 
-float Width(const cv::RotatedRect &rect)
+float Width(const cv::RotatedRect& rect)
 {
 	return min(rect.size.width, rect.size.height);
 }
-float Height(const cv::RotatedRect &rect)
+float Height(const cv::RotatedRect& rect)
 {
 	return max(rect.size.width, rect.size.height);
 }
-float Length2(const cv::Point2f &aPoint)
+float Length2(const cv::Point2f& aPoint)
 {
-	return aPoint.x * aPoint.x + aPoint.y * aPoint.y;
+	return aPoint.x*aPoint.x + aPoint.y*aPoint.y;
 }
 
-bool PointInRect(const cv::RotatedRect &rect, int poiX, int poiY)
+bool PointInRect(const cv::RotatedRect& rect, int poiX, int poiY)
 {
 	std::vector<cv::Point2f> cvtd;
 	cvtd.resize(4);
@@ -445,12 +458,12 @@ bool PointInRect(const cv::RotatedRect &rect, int poiX, int poiY)
 	return dist >= 0.f;
 }
 
-bool PointInRect(const PotentialRect &rect, int poiX, int poiY)
+bool PointInRect(const PotentialRect& rect, int poiX, int poiY)
 {
 	return PointInRect(rect.myRotatedRect, poiX, poiY);
 }
 
-float GetRectRatio(const cv::RotatedRect &rect)
+float GetRectRatio(const cv::RotatedRect& rect)
 {
 	return Width(rect) / Height(rect);
 }
@@ -461,14 +474,14 @@ float PerfectRatioDiff(float aValue)
 	return std::abs((aValue / perfect) - 1.f);
 }
 
-float PerfectRatioDiff(const cv::RotatedRect &rect)
+float PerfectRatioDiff(const cv::RotatedRect& rect)
 {
 	return PerfectRatioDiff(GetRectRatio(rect));
 }
 
-bool IsValidCardRect(const cv::RotatedRect &rect, const float maxCardHeight)
+bool IsValidCardRect(const cv::RotatedRect& rect, const float maxCardHeight)
 {
-	const float minCardHeight = 48.f; //hard to do anything at that size
+	const float minCardHeight = 48.f;//hard to do anything at that size
 	const float width = Width(rect);
 	const float height = Height(rect);
 	if (height > maxCardHeight)
@@ -476,7 +489,7 @@ bool IsValidCardRect(const cv::RotatedRect &rect, const float maxCardHeight)
 		return false;
 	}
 
-	if (width < minCardHeight * 0.74f)
+	if (width < minCardHeight*0.74f)
 	{
 		return false;
 	}
@@ -502,33 +515,33 @@ bool IsValidImageRatio(int cols, int rows)
 	return true;
 }
 
-float SideSum(const cv::RotatedRect &rect) { return rect.size.width + rect.size.height; }
+float SideSum(const cv::RotatedRect& rect) { return rect.size.width + rect.size.height; }
 
-float SizeScale(const cv::RotatedRect &lhs, float aSize)
+float SizeScale(const cv::RotatedRect& lhs, float aSize)
 {
 	float lhsSum = SideSum(lhs);
 	float scale = lhsSum > aSize ? aSize / lhsSum : lhsSum / aSize;
 	return scale;
 }
 
-bool SizeMatch(const cv::RotatedRect &lhs, float aSize)
+bool SizeMatch(const cv::RotatedRect& lhs, float aSize)
 {
 	return SizeScale(lhs, aSize) > 0.93f;
 }
 
-bool SizeMatch(const cv::RotatedRect &lhs, const cv::RotatedRect &rhs)
+bool SizeMatch(const cv::RotatedRect& lhs, const cv::RotatedRect& rhs)
 {
 	return SizeMatch(lhs, SideSum(rhs));
 }
 
-int UpdateTopList(std::vector<Match> &ioList, const Match &iNew, const int topListSize, const float okMatchScore)
+int UpdateTopList(std::vector<Match>& ioList, const Match& iNew, const int topListSize, const float okMatchScore)
 {
 	int lowerThan = -1;
 	int foundIndex = -1;
 	for (int i = 0, e = (int)ioList.size(); i < e; ++i)
 	{
-		Match &match = ioList[i];
-		if (match.myDatabaseCard == iNew.myDatabaseCard || match.myDatabaseCard->myCardName.compare(iNew.myDatabaseCard->myCardName) == 0)
+		Match& match = ioList[i];
+		if (match.myDatabaseCard == iNew.myDatabaseCard || match.myDatabaseCard->myCardName.compare(iNew.myDatabaseCard->myCardName)==0)
 		{
 			foundIndex = i;
 		}
@@ -538,7 +551,7 @@ int UpdateTopList(std::vector<Match> &ioList, const Match &iNew, const int topLi
 		}
 	}
 
-	if (lowerThan != -1)
+	if (lowerThan!=-1)
 	{
 		if (lowerThan <= foundIndex)
 		{
@@ -565,10 +578,10 @@ int UpdateTopList(std::vector<Match> &ioList, const Match &iNew, const int topLi
 	{
 		return okMatchScore;
 	}
-	return ioList[ioList.size() - 1].myScore[0];
+	return ioList[ioList.size()-1].myScore[0];
 }
 
-bool Query::FindBestMatch(std::vector<PotentialCardMatches> &underMouseCards, const std::vector<const CardList *> &iCardSets, const SearchSettings &inputs, const cv::Mat &aroundCardArea, Result &oResult)
+bool Query::FindBestMatch(std::vector<PotentialCardMatches>& underMouseCards, const std::vector<const CardList*>& iCardSets, const SearchSettings& inputs, const cv::Mat& aroundCardArea, Result& oResult)
 {
 	if (underMouseCards.size() == 0)
 	{
@@ -581,7 +594,7 @@ bool Query::FindBestMatch(std::vector<PotentialCardMatches> &underMouseCards, co
 	int listSize = (int)underMouseCards.size();
 	for (int inputIndex = 0; inputIndex < listSize; ++inputIndex)
 	{
-		for (int rectIndex = 0, e = underMouseCards[inputIndex].myCard.myPotenatialRects.size(); rectIndex < e; ++rectIndex)
+		for (int rectIndex = 0, e= underMouseCards[inputIndex].myCard.myPotenatialRects.size(); rectIndex < e; ++rectIndex)
 		{
 			PotentialRect potentialRect = underMouseCards[inputIndex].myCard.myPotenatialRects[rectIndex];
 			if (!potentialRect.myVariations.size())
@@ -589,9 +602,9 @@ bool Query::FindBestMatch(std::vector<PotentialCardMatches> &underMouseCards, co
 				potentialRect.CreateBaseImage(aroundCardArea);
 			}
 
-			std::vector<Match> &matchList = underMouseCards[inputIndex].myList;
+			std::vector<Match>& matchList = underMouseCards[inputIndex].myList;
 			worst = FindPotentialRectMatches(potentialRect, iCardSets, worst, matchList);
-			for (Match &m : matchList)
+			for (Match& m : matchList)
 			{
 				m.myPotentialRectIndex = rectIndex;
 			}
@@ -601,18 +614,19 @@ bool Query::FindBestMatch(std::vector<PotentialCardMatches> &underMouseCards, co
 		}
 	}
 
-	for (PotentialCardMatches &pcm : underMouseCards)
+	for (PotentialCardMatches& pcm : underMouseCards)
 	{
 		if (pcm.myList.size())
 			pcm.myScore = pcm.myList[0].myScore[0];
 	}
 
-	auto scoreSort = [](const PotentialCardMatches &lhs, const PotentialCardMatches &rhs) {
+	auto scoreSort = [](const PotentialCardMatches& lhs, const PotentialCardMatches& rhs)
+	{
 		return lhs.myScore < rhs.myScore;
 	};
 	std::sort(underMouseCards.begin(), underMouseCards.end(), scoreSort);
-
-	const PotentialCardMatches &bestMatch = underMouseCards[0];
+	
+	const PotentialCardMatches& bestMatch = underMouseCards[0];
 	if (bestMatch.myList.size())
 	{
 		if (!oResult.myMatch.myList.size() || bestMatch.myScore < oResult.myMatch.myScore)
@@ -630,30 +644,30 @@ bool Query::FindBestMatch(std::vector<PotentialCardMatches> &underMouseCards, co
 	return false;
 }
 
-int Query::FindPotentialRectMatches(PotentialRect &aPotentialRect, const std::vector<const CardList *> &iCardSets, int aWorst, std::vector<Match> &oMatchList)
+int Query::FindPotentialRectMatches(PotentialRect& aPotentialRect, const std::vector<const CardList*>& iCardSets, int aWorst, std::vector<Match>& oMatchList)
 {
-	const int quickCap = myOkMatchScore / 18; //14; //16 gives +30% at
+	const int quickCap = myOkMatchScore / 18;//14; //16 gives +30% at 
 	const bool useEarlyOut = myGoodMatchScore < 200;
 
 	int bestHamming = aWorst;
 	int bestQuick = -1;
-	const CardData *bestCard = nullptr;
+	const CardData* bestCard = nullptr;
 	int bestVariation = -1;
 
 	for (int x = 0, xe = (int)aPotentialRect.myVariations.size(); x < xe; ++x)
 	{
-		CardInput &input = aPotentialRect.myVariations[x];
-		CardData &queryCard = input.myQuery;
+		CardInput& input = aPotentialRect.myVariations[x];
+		CardData& queryCard = input.myQuery;
 #ifdef DEBUGIMAGES
 		cv::Mat debugMatch = queryCard.myInputImage;
 #endif
 		const ImageHash queryHash = queryCard.GetHash();
 
-		for (const CardList *cardSet : iCardSets)
+		for (const CardList* cardSet : iCardSets)
 		{
 			for (int i = 0, e = (int)cardSet->myCardData.size(); i < e; ++i)
 			{
-				const ImageHash &dbHash = cardSet->myHashes[i];
+				const ImageHash& dbHash = cardSet->myHashes[i];
 				int quickHamming = dbHash.QuickHammingDistance(queryHash);
 				if (quickHamming > quickCap)
 				{
@@ -699,7 +713,18 @@ int Query::FindPotentialRectMatches(PotentialRect &aPotentialRect, const std::ve
 
 bool Query::FindCardInRoiAndPrint(uint8_t *aBuffer, int aBufferLength, int aWidth, int aHeight, Result &r)
 {
-	cv::Mat bgr = cv::Mat(aWidth, aHeight, CV_8UC4, aBuffer);
+	static bool usePng = false;
+	cv::Mat bgr;
+	if (usePng)
+	{
+		cv::Mat rawData = cv::Mat(1, aBufferLength, CV_8UC1, aBuffer);
+		bgr = cv::imdecode(rawData, cv::IMREAD_UNCHANGED);
+	}
+	else
+	{
+		bgr = cv::Mat(aWidth, aHeight, CV_8UC4, aBuffer);
+	}
+
 	if (bgr.empty())
 	{
 		printf("Failed to decode buffer of length: %i\n", aBufferLength);
@@ -708,7 +733,7 @@ bool Query::FindCardInRoiAndPrint(uint8_t *aBuffer, int aBufferLength, int aWidt
 	return FindCardInRoiAndPrint(bgr, myCardDatabase.myCardLists, r);
 }
 
-bool Query::FindCardInRoiAndPrint(const cv::Mat &source, const std::vector<const CardList *> &iCardSets, Result &r)
+bool Query::FindCardInRoiAndPrint(const cv::Mat& source, const std::vector<const CardList*>& iCardSets, Result& r)
 {
 	UpdateSearchSettings();
 	cv::Mat resized;
@@ -719,18 +744,29 @@ bool Query::FindCardInRoiAndPrint(const cv::Mat &source, const std::vector<const
 		return true;
 	}
 	return false;
+
 }
 
 bool Query::AddScreenAndPrint(uint8_t *aBuffer, int aBufferLength, int aWidth, int aHeight, Result &r)
 {
-	cv::Mat bgr = cv::Mat(aWidth, aHeight, CV_8UC4, aBuffer);
-	if (bgr.empty())
+	static bool usePng = false;
+	if (usePng)
+	{
+		cv::Mat rawData = cv::Mat(1, aBufferLength, CV_8UC1, aBuffer);
+		cv::imdecode(rawData, cv::IMREAD_UNCHANGED, &myDecodedScreenBuffer);
+	}
+	else
+	{
+		myDecodedScreenBuffer = cv::Mat(aWidth, aHeight, CV_8UC4, aBuffer);
+	}
+
+	if (myDecodedScreenBuffer.empty())
 	{
 		printf("Failed to decode buffer of length: %i\n", aBufferLength);
 		return false;
 	}
 
-	if (AddScreenBGR(bgr, TimeNow(), r))
+	if (AddScreenBGR(myDecodedScreenBuffer, TimeNow(), r))
 	{
 		return true;
 	}

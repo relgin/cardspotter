@@ -39,7 +39,7 @@ int main()
 		query.myMinCardHeightRelative = 0.5f;
 		query.myMaxCardHeightRelative = 0.7f;
 
-		getFileNames("Regression/Auto1", filenames);
+		getFileNames("Regression/Auto", filenames);
 
 		for (const std::string& file : filenames)
 		{

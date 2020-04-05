@@ -47,6 +47,7 @@ CardData* CardDatabase::GetDataById(const char* aCardId)
 
 void CardDatabase::LoadFromFileStorage(cv::FileStorage& fs)
 {
+	myCardCount = 0;
 	cv::FileNode setNamesNode = fs["setNames"];
 	cv::FileNodeIterator namesIT = setNamesNode.begin(), namesIT_end = setNamesNode.end(); // Go through the node
 	for (; namesIT != namesIT_end; ++namesIT)
@@ -65,6 +66,7 @@ void CardDatabase::LoadFromFileStorage(cv::FileStorage& fs)
 		{
 			CardData data;
 			data.Load(*cardsIT);
+			++myCardCount;
 			myCardsbyName[GetHashname(data.myCardName)].push_back(data);
 			setCards.push_back(data);
 		}
@@ -79,7 +81,6 @@ void CardDatabase::LoadFromFileStorage(cv::FileStorage& fs)
 void CardDatabase::BuildCardLists()
 {
 	myCardLists.clear();
-
 	if (myCustomcardpool.size())
 	{
 		myCardPool.Clear();
