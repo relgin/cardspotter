@@ -1,7 +1,6 @@
 var searchWorker = new Worker(chrome.extension.getURL("worker.js"));
 searchWorker.onmessage = function (e) {
-	console.log('Message received from worker');
-	console.log(e.data);
+//	console.log(e.data);
 	ProcessResult(e.data.result);
 }
 
@@ -146,7 +145,7 @@ function PostScreenshot() {
 	const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
 	const uintArray = imageData.data;
 	searchWorker.postMessage({ action: 'ADD_SCREEN', width: canvas.width, height: canvas.height, imageData: uintArray }, [uintArray.buffer]);
-/*
+	/*
 	var data = gVideoCopy.toDataURL("image/png");
 	if (data.length > 1024) {
 		chrome.runtime.sendMessage({ cmd: "video", videoData: data, width: gVideoCopy.width, height: gVideoCopy.height });
@@ -155,6 +154,7 @@ function PostScreenshot() {
 	else {
 		ResetAutoSearch();
 	}*/
+	autoPostMessageTime = performance.now();
 }
 
 function Update() {
@@ -293,6 +293,7 @@ function Search(mx, my) {
 	else {
 		ResetSearch();
 	}*/
+	postMessageTime = performance.now();
 }
 
 function mouseToVideoRelativeCoords(mx, my) {
@@ -769,7 +770,8 @@ function ShowResult(result) {
 
 	var imgEntry = TooltipCreateBigImageLi();
 
-	if (id.length > 0) {
+	if (id != undefined)
+	{
 		var usename = id < 0;
 		getImage(id, imageurl, usename, cardName, function (img) {
 			img.className = "CardSpotter";
@@ -1018,6 +1020,12 @@ function ProcessResult(result) {
 
 	if (result.isautomatch)
 	{
+		var sendTime = autoPostMessageTime - autoSearchStartTime;
+		var now = performance.now();
+		var searchTime = now - autoPostMessageTime;
+	
+		console.log("SendTime: " + sendTime.toString() + ", SearchTime: " + searchTime.toString() + ", CodeTime: " + result.time.toString());
+
 		ResetAutoSearch();
 	}
 	else
@@ -1030,7 +1038,6 @@ function ProcessResult(result) {
 	}
 
 	if (!result.success) {
-		console.log("no-match");
 		return;
 	}
 

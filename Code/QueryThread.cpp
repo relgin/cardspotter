@@ -781,7 +781,7 @@ bool Query::AddScreenBGR(const cv::Mat &aScreen, const int aCurrentTime, Result 
 	bool found = false;
 	if (aScreen.channels() == 4)
 	{
-		cv::cvtColor(aScreen, myLastScreenBGR, CV_BGRA2BGR);
+		cv::cvtColor(aScreen, myLastScreenBGR, CV_RGBA2BGR);
 	}
 	else
 	{
@@ -1449,6 +1449,7 @@ bool Query::FindCardInRoi(SearchSettings &inputs, const std::vector<const CardLi
 
 	cv::Mat1b grayArea;
 	cv::cvtColor(aRoiMat, grayArea, cv::COLOR_BGR2GRAY);
+// 	cv::cvtColor(aRoiMat, grayArea, cv::COLOR_RGBA2GRAY);
 	debugArea = grayArea;
 
 	static std::vector<PotentialRect> goodRects;

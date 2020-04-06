@@ -16,8 +16,8 @@ CardSpotter().then(function(Module) {
     return response.text().then((text) => {
       CS.LoadDatabase(text);
       CS.SetSetting("automatchhistorysize", "1");
-      CS.SetSetting("minCardsize", "20");
-      CS.SetSetting("maxCardsize", "35");
+      CS.SetSetting("minCardsize", "7");
+      CS.SetSetting("maxCardsize", "20");
       CS.SetSetting("okscore", " 75");
       CS.SetSetting("goodscore", " 84");
       self.postMessage({status: "database installed"});

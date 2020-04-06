@@ -58,11 +58,14 @@ public:
     {
         uint8_t *data = reinterpret_cast<uint8_t *>(addr);
         Result r;
+        int before = TimeNow();
         const bool success = query.AddScreenAndPrint(data, length, width, height, r);
-        // This is the JS object value returned to JS
+        int after = TimeNow();
+       // This is the JS object value returned to JS
         val rv(val::object());
         rv.set("success", val(success));
         rv.set("isautomatch", val(true));
+        rv.set("time", val(after-before));
         if (success)
         {
             BuildResult(rv, r.myMatch.myList[0]);
@@ -74,12 +77,15 @@ public:
     {
         uint8_t *data = reinterpret_cast<uint8_t *>(addr);
         Result r;
+        int before = TimeNow();
         const bool success = query.FindCardInRoiAndPrint(data, length, width, height, r);
+        int after = TimeNow();
         // This is the JS object value returned to JS
         val rv(val::object());
         rv.set("success", val(success));
         rv.set("isautomatch", val(false));
-        if (success)
+        rv.set("time", val(after-before));
+         if (success)
         {
             BuildResult(rv, r.myMatch.myList[0]);
         }
