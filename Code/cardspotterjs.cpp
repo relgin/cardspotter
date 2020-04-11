@@ -32,15 +32,14 @@ extern "C" {
 		}
 	
 		EM_ASM_INT({
-			if (myActiveTabId<0) return;
-			chrome.tabs.sendMessage(myActiveTabId,
+			handlePopupOrBackgroundMessage(
 			{
 				cmd: "showresults",
 				results : [
 					{
-						multiverseid : Module.Pointer_stringify($0),
-						name : Module.Pointer_stringify($1),
-						url : Module.Pointer_stringify($2),
+						multiverseid : AsciiToString($0),
+						name : AsciiToString($1),
+						url : AsciiToString($2),
 						score : $3,
 						px0 : $4,
 						py0 : $5,
@@ -53,7 +52,7 @@ extern "C" {
 						pointx : $12,
 						pointy : $13,
 						isautomatch : ($14==1)?true:false,
-						setcode : Module.Pointer_stringify($15)
+						setcode : AsciiToString($15)
 					}
 				]
 			});
@@ -118,7 +117,7 @@ extern "C" {
 	  gDatabase.LoadString(&fetch->data[0]);
 	  emscripten_fetch_close(fetch);
 	  
-	  printf("CardSpotter: download Succeeded\n");
+	  printf("CardSpotter: Loaded %i cards.\n", gDatabase.myCardCount);
 	  EM_ASM(loadingDone(););
 	}
 	

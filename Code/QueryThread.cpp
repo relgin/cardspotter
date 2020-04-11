@@ -153,7 +153,8 @@ Query::Query(CardDatabase& aCardDatabase)
 , myOkMatchScore(270)
 , myAlreadyMatchedMaxSize(12)
 , myIsAutoMatch(false)
-, mydecodedScreen(VIDEOWIDTH, VIDEOHEIGHT, CV_8UC4)
+, bDebug(false)
+, mydecodedScreen(VIDEOHEIGHT, VIDEOWIDTH, CV_8UC4)
 , myScreenScale(1.0f)
 , myMinCardHeightRelative(0.05f)
 , myMaxCardHeightRelative(0.2f)
@@ -163,7 +164,7 @@ Query::Query(CardDatabase& aCardDatabase)
 
 std::string Query::TestBuffer(unsigned char* aBuffer, int aWidth, int aHeight)
 {
-	cv::Mat primeCase = cv::Mat(aWidth, aHeight, CV_8UC4, (void*)aBuffer);
+	cv::Mat primeCase = cv::Mat(aHeight, aWidth, CV_8UC4, (void*)aBuffer);
 	cv::Mat bgr;
 	cv::cvtColor(primeCase, bgr, cv::COLOR_RGBA2BGR);
 
@@ -302,6 +303,11 @@ int Query::SetSetting(const std::string& key, const std::string& value)
 			return myGoodMatchScore;
 		}
 	}
+	else if (strcmp(key.c_str(), "debug") == 0)
+	{
+		bDebug = atoi(value.c_str());
+		return (int)bDebug;
+	}
 	return -1;
 }
 
@@ -400,23 +406,6 @@ cv::Mat getRotatedRectImage(const cv::RotatedRect& aRect, const cv::Mat& anImage
 	float angle = aRect.angle;
 	cv::Size rect_size((int)std::ceil(aRect.size.width), (int)std::ceil(aRect.size.height));
 
-// 	const bool useRect = std::abs(fmod(angle, 90.f)) < 0.1f;
-// 	if (useRect)
-// 	{
-// 		if (angle == 0.f)
-// 		{
-// 			return cv::Mat(anImage, cv::Rect(aRect.center.x - rect_size.width / 2, aRect.center.y - rect_size.height / 2, rect_size.width, rect_size.height));
-// 		}
-// 	}
-
-// 	// thanks to http://felix.abecassis.me/2011/10/opencv-rotation-deskewing/
-// 	if (aRect.angle < -45.) {
-// 		angle += 90.0;
-// 		std::swap(rect_size.width, rect_size.height);
-// 	}
-	/************************************************************************/
-	/* EXTEND SIZE FROM TOP TO BOTTOM TO MATCH EXPECTED                     */
-	/************************************************************************/
 	// get the rotation matrix
 	cv::Mat rotation = cv::getRotationMatrix2D(aRect.center, angle, 1.0);
 	cv::Mat rotated(rect_size, anImage.type(), cv::Scalar(122,122,122,255));
@@ -713,9 +702,10 @@ int Query::FindPotentialRectMatches(PotentialRect& aPotentialRect, const std::ve
 
 bool Query::FindCardInRoiAndPrint(unsigned char* aBuffer, int aBufferLength, int aWidth, int aHeight, Result& r)
 {
-	cv::Mat rawData = cv::Mat(1, aBufferLength, CV_8UC1, aBuffer);
-	cv::Mat bgr = cv::imdecode(rawData, cv::IMREAD_UNCHANGED);
-//	cv::Mat bgr = cv::Mat(aWidth, aHeight, CV_8UC4, aBuffer);
+	cv::Mat rgba = cv::Mat(aHeight, aWidth, CV_8UC4, aBuffer);
+	cv::Mat bgr;
+	cv::cvtColor(rgba, bgr, CV_RGBA2BGR);
+
 	if (bgr.empty())
 	{
 		printf("Failed to decode buffer of length: %i\n", aBufferLength);
@@ -738,10 +728,15 @@ bool Query::FindCardInRoiAndPrint(const cv::Mat& source, const std::vector<const
 
 }
 
-bool Query::AddScreenAndPrint(unsigned char* aBuffer, int aBufferLength, int aWidth, int aHeight, Result& r)
+bool Query::AddScreenAndPrint(unsigned char* aBuffer, int aBufferLength, int aWidth, int aHeight, Result&  result)
 {
-	cv::Mat rawData = cv::Mat(1, aBufferLength, CV_8UC1, aBuffer);
-	cv::imdecode(rawData, cv::IMREAD_UNCHANGED, &mydecodedScreen);
+	mydecodedScreen = cv::Mat(aHeight, aWidth, CV_8UC4, aBuffer);
+
+	if (bDebug)
+	{
+		const cv::Vec4b raw = mydecodedScreen.at<cv::Vec4b>(0, 0);
+		printf("Decoded(RGBA) [%i, %i, %i, %i]\n", raw[0], raw[1], raw[2], raw[3]);
+	}
 
 	if (mydecodedScreen.empty())
 	{
@@ -749,7 +744,7 @@ bool Query::AddScreenAndPrint(unsigned char* aBuffer, int aBufferLength, int aWi
 		return false;
 	}
 
-	if (AddScreenBGR(mydecodedScreen, TimeNow(), r))
+	if (AddScreenBGR(mydecodedScreen, TimeNow(), result))
 	{
 		return true;
 	}
@@ -766,16 +761,28 @@ bool Query::AddScreenBGR(const cv::Mat& aScreen, const int aCurrentTime, Result&
 
 	if (aScreen.channels() == 4)
 	{
-		cv::cvtColor(aScreen, myLastScreenBGR, CV_BGRA2BGR);
+		cv::cvtColor(aScreen, myLastScreenBGR, CV_RGBA2BGR);
 	}
 	else
 	{
 		aScreen.copyTo(myLastScreenBGR);
 	}
 	
+	if (bDebug)
+	{
+		const cv::Vec3b raw = myLastScreenBGR.at<cv::Vec3b>(0, 0);
+		printf("Converted(BGR)(%i,%i): [%i, %i, %i]\n", myLastScreenBGR.size().width, myLastScreenBGR.size().height,  raw[0], raw[1], raw[2]);
+	}
+
 	if (myScreenScale < 1.f)
 	{
 		cv::resize(myLastScreenBGR, myLastScreenBGR, cv::Size(myLastScreenBGR.size().width * myScreenScale, myLastScreenBGR.size().height * myScreenScale));
+	}
+
+	if (bDebug)
+	{
+		const cv::Vec3b raw = myLastScreenBGR.at<cv::Vec3b>(0, 0);
+		printf("Resized(BGR)(%i,%i): [%i, %i, %i]\n", myLastScreenBGR.size().width, myLastScreenBGR.size().height, raw[0], raw[1], raw[2]);
 	}
 
 	if (myscreenHistory.size() > 0)
@@ -792,22 +799,30 @@ bool Query::AddScreenBGR(const cv::Mat& aScreen, const int aCurrentTime, Result&
 	cv::Mat lastGray;
 	cv::cvtColor(smallMat, lastGray, CV_BGR2GRAY);
 
+	if (bDebug)
+	{
+		const uchar raw = lastGray.at<uchar>(0, 0);
+		printf("lastGray: [%i]\n", raw);
+	}
+
 	const int currentTime = aCurrentTime;
 	myscreentimes.push_back(currentTime);
 	myscreenHistory.push_back(myLastScreenBGR);
 	mygrayMiniHistory.push_back(lastGray);
 
-	const int maxHistory = 5000;
+	const int maxHistory = 1000;
 
 	int i = 0;
 	for (int e = (int)myscreentimes.size()-1; i < e; ++i)
 	{
-		if (currentTime - myscreentimes[i]<maxHistory)
+		if (currentTime - myscreentimes[i] < maxHistory) //remove all up until this point, logic here feels backwards
 		{
+// 			printf("ScreenTime: %i more than %i before %i\n", myscreentimes[i], maxHistory, currentTime);
 			--i;//keep the last one that is above maxHistory
 			break;
 		}
 	}
+
 	if (i > 0)
 	{
 		myscreenHistory.erase(myscreenHistory.begin(), myscreenHistory.begin()+i);
@@ -817,6 +832,10 @@ bool Query::AddScreenBGR(const cv::Mat& aScreen, const int aCurrentTime, Result&
 
 	if (myscreenHistory.size()>1)
 	{
+		if (bDebug)
+		{
+			printf("NewScreens %i, Time: %i\n", (int)myscreenHistory.size(), aCurrentTime);
+		}
 		found = TestDiff(oResult, currentTime);
 	}
 
@@ -862,7 +881,6 @@ bool Query::TestDiff(Result& oResult, const int aCurrentTime)
 	}
 
 	const cv::Mat& oldGray = mygrayMiniHistory[0];
-	const cv::Mat& previousGray = mygrayMiniHistory[mygrayMiniHistory.size() - 2];
 	const cv::Mat& currentGray = mygrayMiniHistory[mygrayMiniHistory.size() - 1];
 	const cv::Mat& currentGrayFullSize = myscreenHistory[myscreenHistory.size() - 1];
 
@@ -872,7 +890,9 @@ bool Query::TestDiff(Result& oResult, const int aCurrentTime)
 	{
 		static bool useCamaraCutDetection = false;
 		static bool lowChangeDetection = false;
+		if (lowChangeDetection||useCamaraCutDetection)
 		{
+			const cv::Mat& previousGray = mygrayMiniHistory[mygrayMiniHistory.size() - 2];
 			cv::Mat prediff;
 			cv::absdiff(previousGray, currentGray, prediff);
 			cv::threshold(prediff, prediff, 25, 255, cv::THRESH_BINARY);
@@ -930,6 +950,11 @@ bool Query::TestDiff(Result& oResult, const int aCurrentTime)
 		}
 
 		cv::Rect rect = cv::boundingRect(contour);
+		if (bDebug)
+		{
+			printf("Rect: %i,%i,%i,%i\n", rect.x, rect.y, rect.width, rect.height);
+		}
+
 #ifdef DEBUGIMAGES
 //  		cv::RotatedRect rr = cv::minAreaRect(contour);
 		cv::Mat dbMat(currentGrayFullSize, rect);
@@ -1458,6 +1483,10 @@ bool Query::FindCardInRoi(SearchSettings& inputs, const std::vector<const CardLi
 		{
 			if (!inputs.myHeightSet || (myIsAutoMatch && inputs.IsValidHeightPermissive(mean)))
 			{
+				if (bDebug)
+				{
+					printf("SetMeanHeight: %.2f\n", mean);
+				}
 				inputs.SetMeanHeight(mean);
 			}
 		}
@@ -1710,8 +1739,11 @@ bool Query::FindCardInMouseRects(std::vector<PotentialCardMatches>& iPotentialCa
 
 	int before = TimeNow();
 	bool res = FindBestMatch(iPotentialCards, iCardSets, inputs, aroundCardArea, oResult);
-	
-//	std::cout << "[BestMatch " << (TimeNow() - before) << "ms]";
+	int time = (TimeNow() - before);
+	if (bDebug && oResult.myMatch.myList.size())
+	{
+		printf("BestMatch %s in time: %ims Score: %.2f\n", oResult.myMatch.myList[0].myDatabaseCard->myCardName.c_str(), time, oResult.myMatch.myScore);
+	}
 
 	return res;
 }
@@ -1733,8 +1765,8 @@ cv::RotatedRect GetRotatedRectFromSelectedLine(int ax, int ay, int bx, int by, c
 	const float len = std::sqrt(vec.x*vec.x + vec.y*vec.y);
 	vec.x /= len;
 	vec.y /= len;
-	const float cardHeight = cos(std::abs(smallAngle)* (3.14159f / 180.f)) * len;//cos v = när/hyp?
-	const float cardWidth = sin(std::abs(smallAngle)* (3.14159f / 180.f)) * len; //sin v = mot/hyp'
+	const float cardHeight = cos(std::abs(smallAngle)* (3.14159f / 180.f)) * len;//cos v = clo/hyp?
+	const float cardWidth = sin(std::abs(smallAngle)* (3.14159f / 180.f)) * len; //sin v = opp/hyp'
 
 	cv::Point2f widthVec = RotateVector(vec, -largeAngle+ angleOffset);
 	cv::Point2f heightVec = RotateVector(vec, smallAngle+ angleOffset);

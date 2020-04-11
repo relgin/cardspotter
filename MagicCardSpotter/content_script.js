@@ -20,6 +20,8 @@ var cDetailsBaseHeight = 324;
 var cDetailsImgHeight = 308;
 
 var resultHistory = [];
+var gLoaded = false;
+var screenTime = 300;
 
 
 var gVideoCopy = null;
@@ -32,6 +34,60 @@ var lastresultstime = performance.now();
 
 var divIndex = "2147483646";
 var extensionUrl = chrome.extension.getURL('');
+
+
+function postImageAsScreen(image)
+{
+	var video = getVideoCanvas();
+	video.height = image.height;
+	video.width = image.width;
+	
+	var copyContext = video.getContext('2d');
+	copyContext.clearRect(0, 0, video.width, video.height);
+	copyContext.drawImage(image,0,0);
+
+	var canvas = video;
+	const imageData = copyContext.getImageData(0, 0, canvas.width, canvas.height);
+	const uintArray = imageData.data;
+//	console.log("Original[" + uintArray[0].toString() + ","  + uintArray[1].toString() + "," + uintArray[2].toString() + "," + uintArray[3].toString() + "]");
+	{
+		const uint8_t_ptr = Module._malloc(uintArray.length);
+		Module.HEAPU8.set(uintArray, uint8_t_ptr);
+		Module.cwrap('AddScreen', null, ['number', 'number', 'number', 'number'])(uint8_t_ptr, uintArray.length, canvas.width, canvas.height);
+		Module._free(uint8_t_ptr);
+	}
+}
+function loadingDone()
+{
+	console.log("CardSpotter Loaded");
+	gLoaded = true;
+
+	var allImages = document.getElementsByTagName('img');
+	for(var i = 0; i < allImages.length ; i++)
+	{
+		postImageAsScreen(allImages[i]);
+	}
+}
+
+function stringToArrayBuffer(string) {
+    var len = string.length;
+    var bytes = new Uint8Array( len );
+    for (var i = 0; i < len; i++)        {
+        bytes[i] = string.charCodeAt(i);
+    }
+    return bytes;
+}
+
+function load()
+{
+	console.log("CardSpotter Load");
+	const extensionUrl = chrome.extension.getURL('');
+	const uintArray = stringToArrayBuffer(extensionUrl+"magic.db");
+	const uint8_t_ptr = Module._malloc(uintArray.length);
+	Module.HEAPU8.set(uintArray, uint8_t_ptr);
+	Module.cwrap('LoadDatabase', null, ['number', 'number'])(uint8_t_ptr, uintArray.length);
+	Module._free(uint8_t_ptr);
+}
 
 function UpdateSettings(callback)
 {
@@ -113,16 +169,21 @@ function saveHistory()
 var autoSearchStartTime = performance.now();
 var autoPostMessageTime = performance.now();
 
+var saved = 0;
+
 function PostScreenshot()
 {
+	if (saved == 0)
+		return;
+
 	if (gSettings == undefined || !gSettings.autoscreen)
 	{
 		return;
 	}
 	
-	if (gSearchState != "done" || gCurrentMode == "disabled")
+	if (gSearchState != "done" || gCurrentMode == "disabled" || !gLoaded)
 	{
-		gScreenTimeout = setTimeout(PostScreenshot, 250);
+		gScreenTimeout = setTimeout(PostScreenshot, screenTime);
 		return;
 	}
 	
@@ -133,6 +194,7 @@ function PostScreenshot()
 		gVideoCopy = document.createElement("canvas");
 	}
 
+	console.log("PostTime: " + performance.now().toString());
 	var areaWidth = gSettings.automatchwidth;
 	var areaHeight = gSettings.automatchheight;
 	var xStart = gSettings.automatchx;
@@ -143,19 +205,42 @@ function PostScreenshot()
 	
 	var copyContext = gVideoCopy.getContext('2d');
 	copyContext.clearRect(0, 0, gVideoCopy.width, gVideoCopy.height);
-
 	copyContext.drawImage(gVideo, gVideo.videoWidth*xStart, gVideo.videoHeight*yStart, gVideo.videoWidth*areaWidth, gVideo.videoHeight*areaHeight, 0, 0, gVideoCopy.width, gVideoCopy.height);
 
-	var data = gVideoCopy.toDataURL("image/png");
-	if (data.length > 1024)
+	if (false)//saved < 1000)
 	{
-		chrome.runtime.sendMessage({cmd: "video", videoData: data, width: gVideoCopy.width, height:gVideoCopy.height});
-		autoPostMessageTime = performance.now();
+		var downloadLink = document.createElement("a");
+		downloadLink.href = gVideoCopy.toDataURL("image/png");
+		downloadLink.download = "postScreenShot "+ saved.toString() + ".png";
+		downloadLink.click();
+		++saved;
 	}
-	else
+
+
+
+	var canvas = gVideoCopy;
+	const imageData = copyContext.getImageData(0, 0, canvas.width, canvas.height);
+	const uintArray = imageData.data;
+//	console.log("Original[" + uintArray[0].toString() + ","  + uintArray[1].toString() + "," + uintArray[2].toString() + "," + uintArray[3].toString() + "]");
 	{
-		ResetAutoSearch();
-	}
+		const uint8_t_ptr = Module._malloc(uintArray.length);
+		Module.HEAPU8.set(uintArray, uint8_t_ptr);
+		Module.cwrap('AddScreen', null, ['number', 'number', 'number', 'number'])(uint8_t_ptr, uintArray.length, canvas.width, canvas.height);
+		Module._free(uint8_t_ptr);
+	  }
+//	searchWorker.postMessage({ action: 'ADD_SCREEN', width: canvas.width, height: canvas.height, imageData: uintArray }, [uintArray.buffer]);
+
+	
+//	var data = gVideoCopy.toDataURL("image/png");
+//	if (data.length > 1024)
+//	{
+//		chrome.runtime.sendMessage({cmd: "video", videoData: uintArray, width: gVideoCopy.width, height:gVideoCopy.height});
+//		autoPostMessageTime = performance.now();
+//	}
+//	else
+//	{
+//		ResetAutoSearch();
+//	}
 }
 
 function Update()
@@ -330,6 +415,7 @@ function showTooltipSearchImage(sx, sy) {
 			debugImage.height = tooltipImage.height;
 			debugImage.width = tooltipImage.width - 16;
 		}
+
 		if (debugImage != null) {
 			ImageSearchVideoCopy(debugImage, sx, sy);
 			var searchImage = tooltipImage.cloneNode(false);
@@ -491,6 +577,8 @@ function updateAutoScreenHighlight() {
 		}
 	}
 }
+
+var myActiveTabId = 0;
 
 function CreateMenu()
 {
@@ -1114,6 +1202,7 @@ function ProcessResults(results)
 	if (result.multiverseid.length==0)
 		return;
 	
+	console.log(result);
 	ConvertToMouseCanvasSpace(result);
 	ShowResult(result);
 }
@@ -1172,12 +1261,13 @@ function ResetSearch()
 	document.body.style.cursor = "auto";
 }
 
+
 function ResetAutoSearch()
 {
 	if (gSearchState == "autoSearch")
 		gSearchState = "done";
 
-	gScreenTimeout = setTimeout(PostScreenshot, 250);
+	gScreenTimeout = setTimeout(PostScreenshot, screenTime);
 }
 
 function handlePopupOrBackgroundMessage(request, sender, sendResponse)

@@ -178,6 +178,7 @@ public:
 	int myOkMatchScore;
 	bool myIsAutoMatch;
 	float myScreenScale;
+	bool bDebug;
 
 	bool TestDiff(Result& oResult, const int aCurrentTime);
 
