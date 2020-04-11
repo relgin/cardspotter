@@ -161,7 +161,7 @@ public:
 	std::vector<const CardData *> myAlreadyMatched;
 	int myAlreadyMatchedMaxSize;
 	int myLastOkMatch;
-	cv::Mat myDecodedScreenBuffer;
+	cv::Mat mydecodedScreen;
 	SearchSettings mySettings;
 	float myMinCardHeightRelative;
 	float myMaxCardHeightRelative;

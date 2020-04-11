@@ -60,10 +60,6 @@ function setSetting(key, value)
 var myActiveTabId = -1;
 var myCurrentMode = "disabled";
 
-var lastScreen = null;
-var gwidth = null;
-var gheight = null;
-
 function setCurrentTabMode(aMode)
 {
 	chrome.tabs.query({ active:true, currentWindow:true}, function(tabs)
@@ -162,37 +158,9 @@ chrome.tabs.onRemoved.addListener(function(tabid, removed) {
 	}
 })
 
-function _base64ToArrayBuffer(base64) {
-    var binary_string =  window.atob(base64);
-    var len = binary_string.length;
-    var bytes = new Uint8Array( len );
-    for (var i = 0; i < len; i++)        {
-        bytes[i] = binary_string.charCodeAt(i);
-    }
-    return bytes;
-}
-
-function stringToArrayBuffer(string) {
-    var len = string.length;
-    var bytes = new Uint8Array( len );
-    for (var i = 0; i < len; i++)        {
-        bytes[i] = string.charCodeAt(i);
-    }
-    return bytes;
-}
-
 chrome.runtime.onMessage.addListener(
   function(request, sender, sendResponse) {
-	if (request.cmd === "video")
-	{
-		//addScreen(_base64ToArrayBuffer(request.videoData.substr(22)), request.width, request.height);
-		addScreen(request.videoData, request.width, request.height);
-	}
-	else if(request.cmd === "search")
-	{
-		findCard(_base64ToArrayBuffer(request.videoData.substr(22)), request.x, request.y, request.width, request.height);
-	}
-	else if(request.cmd === "onload")
+	if(request.cmd === "onload")
 	{
 		clearTimeout(onloadTimeout);
 		if (myActiveTabId != -1)
@@ -210,94 +178,8 @@ chrome.runtime.onMessage.addListener(
 	}
  });
 
-var Module = {
-print: (function() {
-          return function(text) {
-            if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-            console.log(text);
-          };
-        })(),
-        printErr: function(text) {
-          if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-          if (0) { // XXX disabled for safety typeof dump == 'function') {
-            dump(text + '\n'); // fast, straight to the real console
-          } else {
-            console.error(text);
-          }
-        },
-        canvas: (function() {
-        })()
-};
-
-function setCardPool(array)
-{
-	dataHeap.set(array);
-	csSetCardPool(dataHeap.byteOffset, array.length);
-}
-
-
-function addScreen(array, width, heigth)
-{
-	dataHeap.set(array);
-	csAddScreen(dataHeap.byteOffset, array.length, width, heigth);
-}
-
-function findCard(array, px, py, width, heigth)
-{
-	dataHeap.set(array);
-	csFindCard(dataHeap.byteOffset, array.length, width, heigth, px, py);
-}
-
-function loadDatabase(array)
-{
-	dataHeap.set(array);
-	csLoadDatabase(dataHeap.byteOffset, array.length);
-}
-
-var width = 1280;
-var height = 720;
-
-var nDataBytes;
-var dataPtr;
-var dataHeap;
-
-loadingDone();
-//var script = document.createElement('script');
-//script.src = "cardspotter.js";
-//document.body.appendChild(script);
-
-//var script = document.createElement('script');
-//script.src = "cardspotter.js";
-//document.body.appendChild(script);
-
-var csFindCard;
-var csAddScreen;
-
-function loadingDone()
-{
-	console.log("CardSpotter Loaded");
-	chrome.browserAction.onClicked.addListener(function (tab){toggleEnabled(tab);});
-}
-
 chrome.browserAction.onClicked.addListener(function (tab){toggleEnabled(tab);});	
-
-function load()
-{
-	csFindCard = Module.cwrap('FindCard', null, ['number', 'number', 'number','number', 'number', 'number']);
-	csAddScreen = Module.cwrap('AddScreen', null, ['number', 'number', 'number', 'number']);
-	csSetCardPool = Module.cwrap('SetCardPool', null, ['number', 'number']);
-	csSetSetting = Module.cwrap('SetSetting', 'number', ['number', 'number', 'number']);
-	csLoadDatabase = Module.cwrap('LoadDatabase', null, ['number', 'number']);
-	
-	
-	nDataBytes = width * height * 4;
-	dataPtr = Module._malloc(nDataBytes);
-	dataHeap = new Uint8Array(Module.HEAPU8.buffer, dataPtr, nDataBytes);
-	var extensionUrl = chrome.extension.getURL('');
-	loadDatabase(stringToArrayBuffer(extensionUrl+"magic.db"));
-
-	getSettings();
-}
+getSettings();
 
 chrome.runtime.onInstalled.addListener(function (details)
 {

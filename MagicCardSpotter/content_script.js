@@ -998,7 +998,7 @@ function downloadSearchImage(result) {
 		var downloadLink = document.createElement("a");
 		downloadLink.href = searchImage.src;
 		downloadLink.download = "failed.png";
-		if (result.id.length > 0) {
+		if (result.success) {
 			downloadLink.download = result.name + ".png";
 		}
 		downloadLink.click();
@@ -1014,7 +1014,8 @@ function ProcessResult(result) {
 	lastresultstime = performance.now();
 
 	if (result == undefined) {
-		console.log("undefined match");
+		ResetAutoSearch();
+		ResetSearch();
 		return;
 	}
 
@@ -1024,7 +1025,7 @@ function ProcessResult(result) {
 		var now = performance.now();
 		var searchTime = now - autoPostMessageTime;
 	
-		console.log("SendTime: " + sendTime.toString() + ", SearchTime: " + searchTime.toString() + ", CodeTime: " + result.time.toString());
+//		console.log("SendTime: " + sendTime.toString() + ", SearchTime: " + searchTime.toString() + ", CodeTime: " + result.time.toString());
 
 		ResetAutoSearch();
 	}
