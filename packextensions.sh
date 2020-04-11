@@ -1,2 +1,2 @@
-./packchrome.sh
 ./packff.sh
+./packchrome.sh

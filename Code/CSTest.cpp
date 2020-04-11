@@ -6,7 +6,7 @@
 #include <windows.h>
 
 //#pragma optimize("",off)
-const char* cardPool = "bloodbraid elf";
+const char* cardPool = "priest of titania";
 CardDatabase gDatabase;
 Query query(gDatabase);
 
@@ -39,10 +39,15 @@ int main()
 		query.myMinCardHeightRelative = 0.5f;
 		query.myMaxCardHeightRelative = 0.7f;
 
-		getFileNames("Regression/Auto1", filenames);
+		getFileNames("Regression/Auto", filenames);
 
 		for (const std::string& file : filenames)
 		{
+			if (file.find(".png") == -1)
+			{
+				continue;
+			}
+
 			cv::Mat* input;
 			cv::Mat screen = cv::imread(file);
 			input = &screen;
