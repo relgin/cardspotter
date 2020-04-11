@@ -140,9 +140,8 @@ function setMode(aTabId, aMode)
 	{
 		myActiveTabId = aTabId;
 		onloadTimeout = setTimeout(VideoFail, 1000);
-		chrome.tabs.executeScript(myActiveTabId, {file: "cardspotter.js"});
+		chrome.tabs.executeScript(myActiveTabId, {file: "worker_proxy.js"});
 		chrome.tabs.executeScript(myActiveTabId, {file: "content_script.js"});
-		tabMessage(myActiveTabId, {cmd: "tabid", tabid : myActiveTabId});
 	}
 	
 	myCurrentMode = aMode;
@@ -262,6 +261,10 @@ var nDataBytes;
 var dataPtr;
 var dataHeap;
 
+loadingDone();
+//var script = document.createElement('script');
+//script.src = "cardspotter.js";
+//document.body.appendChild(script);
 
 //var script = document.createElement('script');
 //script.src = "cardspotter.js";
@@ -273,6 +276,7 @@ var csAddScreen;
 function loadingDone()
 {
 	console.log("CardSpotter Loaded");
+	chrome.browserAction.onClicked.addListener(function (tab){toggleEnabled(tab);});
 }
 
 chrome.browserAction.onClicked.addListener(function (tab){toggleEnabled(tab);});	
@@ -284,6 +288,7 @@ function load()
 	csSetCardPool = Module.cwrap('SetCardPool', null, ['number', 'number']);
 	csSetSetting = Module.cwrap('SetSetting', 'number', ['number', 'number', 'number']);
 	csLoadDatabase = Module.cwrap('LoadDatabase', null, ['number', 'number']);
+	
 	
 	nDataBytes = width * height * 4;
 	dataPtr = Module._malloc(nDataBytes);

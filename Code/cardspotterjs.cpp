@@ -10,6 +10,8 @@ extern "C" {
 
 	void PostResults(Result r, bool success, bool autoMatch)
 	{
+		printf("PostResults %s", (success)?"TRUE":"FALSE");
+
 		const char* cardId = "";
 		const char* cardName = "";
 		int score = 1024;
@@ -29,6 +31,7 @@ extern "C" {
 			cardName = match.myDatabaseCard->myCardName.c_str();
 			score = (int)match.myScore[0];
 			setCode = match.myDatabaseCard->mySetCode.c_str();
+			printf("PostResults success %s", cardId);
 		}
 	
 		EM_ASM_INT({
@@ -56,6 +59,7 @@ extern "C" {
 					}
 				]
 			});
+			console.log("Sent");
 
 		}, cardId, cardName, url, score,
 		(int)rectpoints[0].x, (int)rectpoints[0].y,
@@ -69,6 +73,7 @@ extern "C" {
 	
 	void FindCard(unsigned char* aBuffer, int aBufferLength, int aWidth, int aHeight, int px, int py)
 	{
+		printf("FindCard %i\n", aBufferLength);
 		Result r;
 		const bool success = query.FindCardInRoiAndPrint(aBuffer, aBufferLength, aWidth, aHeight, r);
 		query.myPoint.x = px - aWidth/2;

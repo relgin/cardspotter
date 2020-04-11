@@ -5,11 +5,9 @@ fi
 
 OPENCV=opencv
 
-#rm -f cardspotter.html
 rm -f cardspotter.js
 rm -f cardspotter.wasm
 
-#rm -f ../MagicCardSpotter/cardspotter.html
 rm -f ../MagicCardSpotter/cardspotter.js
 rm -f ../MagicCardSpotter/cardspotter.wasm
 

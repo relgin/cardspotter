@@ -81,7 +81,6 @@ void CardDatabase::LoadFromFileStorage(cv::FileStorage& fs)
 void CardDatabase::BuildCardLists()
 {
 	myCardLists.clear();
-
 	if (myCustomcardpool.size())
 	{
 		myCardPool.Clear();
