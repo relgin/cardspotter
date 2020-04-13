@@ -1,34 +1,158 @@
-var searchWorker = new Worker(chrome.extension.getURL("worker.js"));
-searchWorker.onmessage = function (e) {
-//	console.log(e.data);
-	ProcessResult(e.data.result);
+var gSettings = undefined;
+var gCurrentMode = "disabled";
+var cExpectedVideoHeight = 720;
+var gDebug = false;
+
+class VideoDetection {
+	constructor(video) {
+		this.video = video;
+		this.autoSearchStartTime = performance.now();
+		this.autoPostMessageTime = performance.now();
+		this.videoCopy = document.createElement("canvas");
+		this.searchWorker = new Worker(chrome.extension.getURL("worker.js"));
+
+		let _this = this;
+		this.searchWorker.onmessage = function (e) {
+
+			if (e.data.result == undefined)
+			{
+				_this.ResetAutoSearch();
+				_this.ResetSearch();
+				return;
+			}
+
+			if (e.data.result.isautomatch)
+			{
+				_this.ResetAutoSearch();
+			}
+
+			if (!e.data.result.isautomatch)
+			{
+				_this.ResetSearch();
+			}
+
+			if (gDebug && !e.data.result.isautomatch)
+			{
+				let sendTime = _this.autoPostMessageTime - _this.autoSearchStartTime;
+				let now = performance.now();
+				let searchTime = now - _this.autoPostMessageTime;
+				console.log("SendTime: " + sendTime.toString() + ", SearchTime: " + searchTime.toString());
+			}
+		
+			ProcessResult(e.data.result);
+		}
+
+		this.searchStartTime = performance.now();
+		this.postMessageTime = performance.now();
+
+		this.searchState = "done";
+	}
+
+	PostScreenshot() {
+
+		if (!gSettings.autoscreen) {
+			console.log("!gSettings.autoscreen")
+			return;
+		}
+
+		if (gCurrentMode == "disabled") {
+			this.ResetAutoSearch();
+			return;
+		}
+
+		if (this.searchState != "done") {
+			this.ResetAutoSearch();
+			return;
+		}
+
+		this.searchState = "autoSearch";
+		this.autoSearchStartTime = performance.now();
+		if (this.videoCopy == null) {
+			this.videoCopy = document.createElement("canvas");
+		}
+
+		var areaWidth = gSettings.automatchwidth;
+		var areaHeight = gSettings.automatchheight;
+		var xStart = gSettings.automatchx;
+		var yStart = gSettings.automatchy;
+		var scale = cExpectedVideoHeight / this.video.videoHeight;
+		this.videoCopy.height = this.video.videoHeight * scale * areaHeight;
+		this.videoCopy.width = this.video.videoWidth * scale * areaWidth;
+
+		var copyContext = this.videoCopy.getContext('2d');
+		copyContext.clearRect(0, 0, this.videoCopy.width, this.videoCopy.height);
+		copyContext.drawImage(this.video, this.video.videoWidth * xStart, this.video.videoHeight * yStart, this.video.videoWidth * areaWidth, this.video.videoHeight * areaHeight, 0, 0, this.videoCopy.width, this.videoCopy.height);
+
+		const imageData = copyContext.getImageData(0, 0, this.videoCopy.width, this.videoCopy.height);
+		const uintArray = imageData.data;
+		this.searchWorker.postMessage({ action: 'ADD_SCREEN', width: this.videoCopy.width, height: this.videoCopy.height, imageData: uintArray }, [uintArray.buffer]);
+
+		this.autoPostMessageTime = performance.now();
+	}
+
+	Search(mx, my) {
+		this.searchStartTime = performance.now();
+
+		var { rx, ry } = mouseToVideoRelativeCoords(mx, my);
+
+		var sx = rx * this.video.videoWidth;
+		var sy = ry * this.video.videoHeight;
+
+		this.searchState = "search";
+		document.body.style.cursor = "wait";
+
+		var cTimeoutValue = 5000;
+
+		this.searchTimeout = setTimeout(this.ResetSearch, 5000);
+
+		ImageSearchVideoCopy(this.videoCopy, this.video, sx, sy);
+
+		const imageData = this.videoCopy.getContext('2d').getImageData(0, 0, this.videoCopy.width, this.videoCopy.height);
+		const uintArray = imageData.data;
+		this.searchWorker.postMessage({ action: 'FIND_CARD', width: this.videoCopy.width, height: this.videoCopy.height, imageData: uintArray, x: sx, y: sy }, [uintArray.buffer]);
+
+		showTooltipSearchImage(sx, sy);
+
+		this.postMessageTime = performance.now();
+	}
+
+	ResetSearch() {
+		clearTimeout(this.searchTimeout);
+		this.searchState = "done";
+		document.body.style.cursor = "auto";
+	}
+
+	ResetAutoSearch() {
+		if (this.searchState == "autoSearch") {
+			this.searchState = "done";
+		}
+		
+		let _this = this;
+		this.screenTimeout = setTimeout(function(){_this.PostScreenshot();}, 250);
+	}
+
+	SetSetting(k, v) {
+		this.searchWorker.postMessage({ action: 'SET_SETTING', key: k, value: v });
+	}
 }
 
-var gSettings = undefined;
-
-var gCurrentMode = "disabled";
 var gTriggerSearchTimeout;
-var gSearchTimeout;
+
 var gUpdateTimeout;
-var gScreenTimeout;
-var gSearchState = "done";
+
 var gx = 0;
 var gy = 0;
+
 var lastGx = 0;
 var lastGy = 0;
 
-var cUseLocalImages = false;
-var cExpectedVideoHeight = 720;
 var cUnblockSettingsWidth = 200;//Change this to be max cap based on client size (not fixed offset)
-var cTimeoutValue = 5000;
+
 var cDetailsBaseWidth = 224;
 var cDetailsBaseHeight = 324;
 var cDetailsImgHeight = 308;
 
 var resultHistory = [];
-
-
-var gVideoCopy = null;
 
 
 var fullScreen = false;
@@ -38,6 +162,15 @@ var lastresultstime = performance.now();
 var divIndex = "2147483646";
 var extensionUrl = chrome.extension.getURL('');
 
+var cardSpotterLibSettings = [
+	"automatchhistorysize",
+	"cardpool",
+	"mincardsize",
+	"maxcardsize",
+	"okscore",
+	"goodscore"
+];
+
 function UpdateSettings(callback) {
 	var wasAutoscreen = gSettings != undefined && gSettings.autoscreen != undefined && gSettings.autoscreen; //misses if we enable/disable on the same video
 	chrome.storage.sync.get(null, function (items) {
@@ -45,7 +178,19 @@ function UpdateSettings(callback) {
 		updateAutoScreenHighlight();
 		updateMouseSearchHighlight();
 		if (gSettings.autoscreen && !wasAutoscreen) {
-			PostScreenshot();
+
+			videoSearchers.forEach(function (vs) {
+				vs.PostScreenshot();
+			});
+		}
+
+		for (var key in items) {
+			if (cardSpotterLibSettings.indexOf(key) != -1) {
+
+				videoSearchers.forEach(function (vs) {
+					vs.SetSetting(key, items[key].toString());
+				});
+			}
 		}
 
 		UpdateDebugColors();
@@ -110,53 +255,6 @@ function saveHistory() {
 	vLink.click();
 }
 
-var autoSearchStartTime = performance.now();
-var autoPostMessageTime = performance.now();
-
-function PostScreenshot() {
-	if (gSettings == undefined || !gSettings.autoscreen) {
-		return;
-	}
-
-	if (gSearchState != "done" || gCurrentMode == "disabled") {
-		gScreenTimeout = setTimeout(PostScreenshot, 250);
-		return;
-	}
-
-	gSearchState = "autoSearch";
-	autoSearchStartTime = performance.now();
-	if (gVideoCopy == null) {
-		gVideoCopy = document.createElement("canvas");
-	}
-
-	var areaWidth = gSettings.automatchwidth;
-	var areaHeight = gSettings.automatchheight;
-	var xStart = gSettings.automatchx;
-	var yStart = gSettings.automatchy;
-	var scale = cExpectedVideoHeight / gVideo.videoHeight;
-	gVideoCopy.height = gVideo.videoHeight * scale * areaHeight;
-	gVideoCopy.width = gVideo.videoWidth * scale * areaWidth;
-
-	var copyContext = gVideoCopy.getContext('2d');
-	copyContext.clearRect(0, 0, gVideoCopy.width, gVideoCopy.height);
-	copyContext.drawImage(gVideo, gVideo.videoWidth * xStart, gVideo.videoHeight * yStart, gVideo.videoWidth * areaWidth, gVideo.videoHeight * areaHeight, 0, 0, gVideoCopy.width, gVideoCopy.height);
-
-	var canvas = gVideoCopy;
-	const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
-	const uintArray = imageData.data;
-	searchWorker.postMessage({ action: 'ADD_SCREEN', width: canvas.width, height: canvas.height, imageData: uintArray }, [uintArray.buffer]);
-	/*
-	var data = gVideoCopy.toDataURL("image/png");
-	if (data.length > 1024) {
-		chrome.runtime.sendMessage({ cmd: "video", videoData: data, width: gVideoCopy.width, height: gVideoCopy.height });
-		autoPostMessageTime = performance.now();
-	}
-	else {
-		ResetAutoSearch();
-	}*/
-	autoPostMessageTime = performance.now();
-}
-
 function Update() {
 	if (gCurrentMode == "disabled") {
 		return;
@@ -185,18 +283,18 @@ function ClearTooltipDiv() {
 }
 
 function IsFullScreen() {
-	return gVideo.scrollWidth > screen.width - 30;
+	return toolTipParent.scrollWidth > screen.width - 30;
 }
 
 var lastVideoRect = null;
 
 function getVideoClientRect() {
-	var rect = gVideo.getBoundingClientRect();
+	var rect = toolTipParent.getBoundingClientRect();
 	const xScale = GetClientToVideoScaleX();
 	const yScale = GetClientToVideoScaleY();
 	if (xScale < yScale) //div is wider than high
 	{
-		const actualWidth = gVideo.videoWidth / yScale;//even scale on video so it will use the larger one
+		const actualWidth = toolTipParent.videoWidth / yScale;//even scale on video so it will use the larger one
 		const diff = rect.width - actualWidth;
 		rect.x = rect.x + (diff / 2.0);
 		rect.width = actualWidth;
@@ -245,7 +343,7 @@ function UpdateMouseCanvasSize() {
 
 function InsertMouseGrabCanvas(mousegrabcanvas) {
 	if (IsFullScreen()) {
-		gVideo.parentNode.insertBefore(mousegrabcanvas, gVideo.parentNode.firstChild);
+		toolTipParent.parentNode.insertBefore(mousegrabcanvas, toolTipParent.parentNode.firstChild);
 	}
 	else {
 		document.body.insertBefore(mousegrabcanvas, document.body.firstChild);
@@ -253,47 +351,10 @@ function InsertMouseGrabCanvas(mousegrabcanvas) {
 }
 
 function GetClientToVideoScaleX() {
-	return gVideo.videoWidth / gVideo.clientWidth;
+	return toolTipParent.videoWidth / toolTipParent.clientWidth;
 }
 function GetClientToVideoScaleY() {
-	return gVideo.videoHeight / gVideo.clientHeight;
-}
-
-var searchStartTime = performance.now();
-var postMessageTime = performance.now();
-
-function Search(mx, my) {
-	lastGx = mx;
-	lastGy = my;
-
-	searchStartTime = performance.now();
-
-	var { rx, ry } = mouseToVideoRelativeCoords(mx, my);
-
-	var sx = rx * gVideo.videoWidth;
-	var sy = ry * gVideo.videoHeight;
-
-	gSearchState = "search";
-	document.body.style.cursor = "wait";
-	gSearchTimeout = setTimeout(function () { ResetSearch(); }, cTimeoutValue);
-	var canvas = getVideoCanvas();
-	ImageSearchVideoCopy(getVideoCanvas(), sx, sy);
-
-	const imageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
-	const uintArray = imageData.data;
-	searchWorker.postMessage({ action: 'FIND_CARD', width: canvas.width, height: canvas.height, imageData: uintArray, x: sx, y: sy }, [uintArray.buffer]);
-
-	showTooltipSearchImage(sx, sy);
-/*
-	var data = gVideoCopy.toDataURL("image/png");
-	if (data.length > 1024) {
-		chrome.runtime.sendMessage({ cmd: "search", time: performance.now(), x: sx, y: sy, videoData: data, width: gVideoCopy.width, height: gVideoCopy.height });
-		postMessageTime = performance.now();
-	}
-	else {
-		ResetSearch();
-	}*/
-	postMessageTime = performance.now();
+	return toolTipParent.videoHeight / toolTipParent.clientHeight;
 }
 
 function mouseToVideoRelativeCoords(mx, my) {
@@ -319,7 +380,7 @@ function showTooltipSearchImage(sx, sy) {
 			debugImage.width = tooltipImage.width - 16;
 		}
 		if (debugImage != null) {
-			ImageSearchVideoCopy(debugImage, sx, sy);
+			ImageSearchVideoCopy(debugImage, toolTipParent, sx, sy);
 			var searchImage = tooltipImage.cloneNode(false);
 			searchImage.id = "searchImage";
 			searchImage.src = debugImage.toDataURL("image/png");
@@ -330,6 +391,8 @@ function showTooltipSearchImage(sx, sy) {
 }
 
 function OnMouseStopped() {
+	lastGx = gx;
+	lastGy = gy;
 	Search(gx, gy);
 }
 
@@ -376,7 +439,9 @@ function OnMouseDown(e) {
 	if (UseMouseClick()) {
 		gx = e.offsetX;
 		gy = e.offsetY;
-		Search(gx, gy);
+		lastGx = gx;
+		lastGy = gy;
+		videoSearchers[0].Search(gx, gy);
 	}
 }
 
@@ -413,21 +478,14 @@ function RotateVector(vec, deg) {
 	return { x: vec.x * Math.cos(rad) - vec.y * Math.sin(rad), y: vec.x * Math.sin(rad) + vec.y * Math.cos(rad) };
 }
 
-function getVideoCanvas() {
-	if (gVideoCopy == null) {
-		gVideoCopy = document.createElement("canvas");
-	}
-	return gVideoCopy;
-}
-
-function ImageSearchVideoCopy(canvas, px, py) {
-	var scale = cExpectedVideoHeight / gVideo.videoHeight;
-	canvas.height = scale * gVideo.videoHeight * Math.min(1.0, (gSettings.maxcardsize / 100.0) * 2.0);
+function ImageSearchVideoCopy(canvas, video, px, py) {
+	var scale = cExpectedVideoHeight / video.videoHeight;
+	canvas.height = scale * video.videoHeight * Math.min(1.0, (gSettings.maxcardsize / 100.0) * 2.0);
 	canvas.width = canvas.height;
 
 	var copyContext = canvas.getContext('2d');
 	copyContext.clearRect(0, 0, canvas.width, canvas.height);
-	copyContext.drawImage(gVideo, px - canvas.width * 0.5 / scale, py - canvas.height * 0.5 / scale, canvas.width / scale, canvas.height / scale, 0, 0, canvas.width, canvas.height);
+	copyContext.drawImage(video, px - canvas.width * 0.5 / scale, py - canvas.height * 0.5 / scale, canvas.width / scale, canvas.height / scale, 0, 0, canvas.width, canvas.height);
 }
 
 function updateMouseSearchHighlight() {
@@ -539,9 +597,9 @@ function Setup() {
 		namediv = document.createElement("div");
 		namediv.id = "namediv";
 
-		if (gVideo != null)//fullScreen)
+		if (toolTipParent != null)//fullScreen)
 		{
-			gVideo.parentNode.insertBefore(namediv, gVideo.parentNode.firstChild);
+			toolTipParent.parentNode.insertBefore(namediv, toolTipParent.parentNode.firstChild);
 		}
 		else {
 			document.body.insertBefore(namediv, document.body.firstChild);
@@ -551,15 +609,11 @@ function Setup() {
 		var menudiv = document.getElementById("CardSpotterMenu");
 		menudiv.className = "CardSpotterMenu CardSpotterMenuBig";
 	}
-
-
-
 }
 
 function Teardown() {
-	clearTimeout(gScreenTimeout);
 	clearTimeout(gUpdateTimeout);
-	chrome.runtime.onMessage.removeListener(handlePopupOrBackgroundMessage);
+//	chrome.runtime.onMessage.removeListener(handlePopupOrBackgroundMessage);
 	var namediv = document.getElementById("namediv");
 	if (namediv != null) {
 		namediv.parentNode.removeChild(namediv);
@@ -572,10 +626,12 @@ function Teardown() {
 	if (tooltipDiv != null) {
 		tooltipDiv.parentNode.removeChild(tooltipDiv);
 	}
-	gSettings = undefined;
+
+	lastVideoRect = null;
 }
 
 function SetMode(aMode) {
+
 	if (gCurrentMode == aMode) {
 		return;
 	}
@@ -592,7 +648,6 @@ function SetMode(aMode) {
 		Setup();
 		gCurrentMode = aMode;
 		Update();
-		gScreenTimeout = setTimeout(PostScreenshot, 100);
 	}
 
 	gCurrentMode = aMode;
@@ -742,6 +797,7 @@ function BlinkCardRect(result) {
 }
 
 function getImageUrl(coreUrl) {
+	var cUseLocalImages = false;
 	if (cUseLocalImages) {
 		return extensionUrl + "images/" + coreUrl + ".png";
 	}
@@ -770,8 +826,7 @@ function ShowResult(result) {
 
 	var imgEntry = TooltipCreateBigImageLi();
 
-	if (id != undefined)
-	{
+	if (id != undefined) {
 		var usename = id < 0;
 		getImage(id, imageurl, usename, cardName, function (img) {
 			img.className = "CardSpotter";
@@ -931,18 +986,18 @@ function CreateTooltipDiv() {
 		}
 
 		if (gSettings.vertical == "top") {
-			var videoRect = gVideo.getBoundingClientRect();
+			var videoRect = toolTipParent.getBoundingClientRect();
 			tooltipDiv.style.top = (videoRect.height * gSettings.clickareay).toString() + "px";
 		}
 		else {
 			tooltipDiv.style.bottom = "0px";
 		}
 
-		if (tooltipDiv.parentNode == null || tooltipDiv.parentNode != gVideo.parentNode) {
+		if (tooltipDiv.parentNode == null || tooltipDiv.parentNode != toolTipParent.parentNode) {
 			if (tooltipDiv.parentNode != null) {
 				tooltipDiv.parentNode.removeChild(tooltipDiv);
 			}
-			gVideo.parentNode.insertBefore(tooltipDiv, gVideo.parentNode.firstChild);
+			toolTipParent.parentNode.insertBefore(tooltipDiv, toolTipParent.parentNode.firstChild);
 		}
 	}
 	else //on the outside if possible
@@ -973,7 +1028,7 @@ function CreateTooltipDiv() {
 			}
 		}
 
-		if (tooltipDiv.parentNode == null || tooltipDiv.parentNode == gVideo.parentNode) {
+		if (tooltipDiv.parentNode == null || tooltipDiv.parentNode == toolTipParent.parentNode) {
 			if (tooltipDiv.parentNode != null) {
 				tooltipDiv.parentNode.removeChild(tooltipDiv);
 			}
@@ -994,48 +1049,31 @@ function ShowError(error) {
 
 function downloadSearchImage(result) {
 	var searchImage = document.getElementById("searchImage");
-	if (searchImage != null && !result.isautomatch) {
+	if (searchImage != null) {
 		var downloadLink = document.createElement("a");
 		downloadLink.href = searchImage.src;
 		downloadLink.download = "failed.png";
-		if (result.success) {
-			downloadLink.download = result.name + ".png";
+		if (name !== undefined) {
+			downloadLink.download = name + ".png";
 		}
 		downloadLink.click();
 	}
-}
-
-function ProcessResults(results) {
-
-	ProcessResult(results[0]);
 }
 
 function ProcessResult(result) {
 	lastresultstime = performance.now();
 
 	if (result == undefined) {
-		ResetAutoSearch();
-		ResetSearch();
 		return;
 	}
 
-	if (result.isautomatch)
+	if (gDebug)
 	{
-		var sendTime = autoPostMessageTime - autoSearchStartTime;
-		var now = performance.now();
-		var searchTime = now - autoPostMessageTime;
-	
-//		console.log("SendTime: " + sendTime.toString() + ", SearchTime: " + searchTime.toString() + ", CodeTime: " + result.time.toString());
-
-		ResetAutoSearch();
-	}
-	else
-	{
-		ResetSearch();
+		console.log("CodeTime: " + result.time.toString());
 	}
 
 	if (gSettings.debugview && !result.isautomatch) {
-		downloadSearchImage(result);
+		downloadSearchImage(result.name);
 	}
 
 	if (!result.success) {
@@ -1051,7 +1089,7 @@ function ConvertToMouseCanvasSpace(result) {
 	const yScale = GetClientToVideoScaleY();
 	const videoToClientScale = (xScale > yScale) ? xScale : yScale;
 	var rect = [{ x: result.px0, y: result.py0 }, { x: result.px1, y: result.py1 }, { x: result.px2, y: result.py2 }, { x: result.px3, y: result.py3 }];
-	const inverseScale = gVideo.videoHeight / cExpectedVideoHeight;
+	const inverseScale = toolTipParent.videoHeight / cExpectedVideoHeight;
 
 	if (result.rescale == undefined)
 		result.rescale = 1.0;
@@ -1061,18 +1099,18 @@ function ConvertToMouseCanvasSpace(result) {
 		rect[i].x += result.pointx; //add roi start (to full input)
 		rect[i].x *= inverseScale; //descale downsample (at scale)
 		if (result.isautomatch) {
-			rect[i].x += gSettings.automatchx * gVideo.videoWidth; //offset (now in video space)
+			rect[i].x += gSettings.automatchx * toolTipParent.videoWidth; //offset (now in video space)
 		}
-		rect[i].x -= gSettings.clickareax * gVideo.videoWidth; //offset (now in video canvas space)
+		rect[i].x -= gSettings.clickareax * toolTipParent.videoWidth; //offset (now in video canvas space)
 
 		rect[i].x /= videoToClientScale; //videoToClient
 		rect[i].y *= result.rescale;
 		rect[i].y += result.pointy; //add roi start
 		rect[i].y *= inverseScale; //descale downsample
 		if (result.isautomatch) {
-			rect[i].y += gSettings.automatchy * gVideo.videoHeight; //offset
+			rect[i].y += gSettings.automatchy * toolTipParent.videoHeight; //offset
 		}
-		rect[i].y -= gSettings.clickareay * gVideo.videoHeight; //offset (now in video canvas space)
+		rect[i].y -= gSettings.clickareay * toolTipParent.videoHeight; //offset (now in video canvas space)
 		rect[i].y /= videoToClientScale; //videoToClient
 	}
 	result.px0 = rect[0].x;
@@ -1091,20 +1129,9 @@ function handleErrorMessage(request, sender, sendResponse) {
 	}
 }
 
-function ResetSearch() {
-	clearTimeout(gSearchTimeout);
-	gSearchState = "done";
-	document.body.style.cursor = "auto";
-}
-
-function ResetAutoSearch() {
-	if (gSearchState == "autoSearch")
-		gSearchState = "done";
-
-	gScreenTimeout = setTimeout(PostScreenshot, 250);
-}
-
 function handlePopupOrBackgroundMessage(request, sender, sendResponse) {
+	console.log(request.cmd);
+
 	if (request.cmd == "getmode") {
 		if (gCurrentMode == "disabled") {
 			sendResponse("disabled");
@@ -1115,6 +1142,7 @@ function handlePopupOrBackgroundMessage(request, sender, sendResponse) {
 	}
 	else if (request.cmd == "setmode") {
 		SetMode(request.mode);
+		chrome.runtime.sendMessage({ cmd: "modeset" });
 	}
 	else if (request.cmd == "log") {
 		console.log(request.log);
@@ -1129,18 +1157,29 @@ function handlePopupOrBackgroundMessage(request, sender, sendResponse) {
 	}
 }
 
-function getVideo(videoTags) {
+function getVideos(videoTags) {
+	let videos = [];
 	for (var i = 0; i < videoTags.length; i++) {
 		var video = videoTags.item(i);
 		if (video.clientWidth > 250 && video.clientHeight > 150) {
-			return video;
+			videos.push(video);
+			break; //for now we ONLY do one video
 		}
 	}
+	return videos;
 };
 
-var gVideo = getVideo(document.getElementsByTagName('video'));
+var videos = getVideos(document.getElementsByTagName('video'));
+var toolTipParent = (videos.length > 0 ) ? videos[0] : null;
+var videoSearchers = [];
 
-if (gVideo != null) {
+if (toolTipParent != null) {
+
+	for (let i=0; i<videos.length; ++i)
+	{
+		videoSearchers.push(new VideoDetection(videos[i]));
+	}
+
 	var link = document.createElement('link');
 	link.href = chrome.extension.getURL('') + 'content_script.css';
 	link.rel = 'stylesheet';
@@ -1161,7 +1200,7 @@ if (gVideo != null) {
 		chrome.runtime.onMessage.addListener(handlePopupOrBackgroundMessage);
 		chrome.runtime.sendMessage({ cmd: "onload" });
 	});
-
+	
 	chrome.storage.onChanged.addListener(function (changes, namespace) {
 		UpdateSettings();
 	});

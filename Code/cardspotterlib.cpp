@@ -38,21 +38,24 @@ public:
         std::vector<cv::Point2f> rectpoints;
         rectpoints.resize(4);
         match.myInput.myRect.points(&rectpoints[0]);
-        // I don't know why we need this...
+        
         rv.set("name", val(match.myDatabaseCard->myCardName));
         rv.set("id", val(match.myDatabaseCard->myCardId));
         rv.set("score", val((int)match.myScore[0]));
         rv.set("set", val(match.myDatabaseCard->mySetCode));
         rv.set("url", val(match.myDatabaseCard->myImgCoreUrl));
+        
         // The rectangle in the image where the card was found
-        rv.set("x1", val((int)rectpoints[0].x));
-        rv.set("x2", val((int)rectpoints[1].x));
-        rv.set("x3", val((int)rectpoints[2].x));
-        rv.set("x4", val((int)rectpoints[3].x));
-        rv.set("y1", val((int)rectpoints[0].y));
-        rv.set("y2", val((int)rectpoints[1].y));
-        rv.set("y3", val((int)rectpoints[2].y));
-        rv.set("y4", val((int)rectpoints[3].y));
+        rv.set("px0", val((int)rectpoints[0].x));
+        rv.set("px1", val((int)rectpoints[1].x));
+        rv.set("px2", val((int)rectpoints[2].x));
+        rv.set("px3", val((int)rectpoints[3].x));
+        rv.set("py0", val((int)rectpoints[0].y));
+        rv.set("py1", val((int)rectpoints[1].y));
+        rv.set("py2", val((int)rectpoints[2].y));
+        rv.set("py3", val((int)rectpoints[3].y));
+        rv.set("pointx", val((int)query.myPoint.x));
+        rv.set("pointy", val((int)query.myPoint.y));
     }
     val AddScreen(const int &addr, int length, const size_t width, const size_t height)
     {

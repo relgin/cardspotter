@@ -2,7 +2,8 @@ self.importScripts('/cardspotter.js');
 
 const Actions = {
   FIND_CARD: 'FIND_CARD',
-  ADD_SCREEN: 'ADD_SCREEN'
+  ADD_SCREEN: 'ADD_SCREEN',
+  SET_SETTING: 'SET_SETTING'
 };
 
 let ready = false;
@@ -45,14 +46,22 @@ CardSpotter().then(function(Module) {
     if (!ready) {
       self.postMessage({status: "not ready"});
       return;
-    }  
-    const { action, imageData, width, height, x, y, scale } = event.data;
-    if (action === Actions.FIND_CARD) {
+    }
+    const action = event.data.action;
+    
+     if (action === Actions.FIND_CARD) {
+      const { imageData, width, height, x, y, scale } = event.data;
       findCard(imageData, width, height, x, y, scale);
     }
     else if (action === Actions.ADD_SCREEN)
     {
+      const { imageData, width, height } = event.data;
       addScreen(imageData, width, height);
+    }
+    else if (action === Actions.SET_SETTING)
+    {
+      const { key, value } = event.data;
+      CS.SetSetting(key, value);
     }
   }
 });

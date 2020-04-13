@@ -1,11 +1,3 @@
-var cardSpotterLibSettings =[
-"automatchhistorysize",
-"cardpool",
-"mincardsize",
-"maxcardsize",
-"okscore",
-"goodscore"
-];
 
 var defaultSettings = {
 	debugview: false,
@@ -43,19 +35,9 @@ var defaultSettings = {
 	};
 var settings = defaultSettings;
 
-
 chrome.storage.onChanged.addListener(function(changes, namespace) {
 	getSettings();
 });
-
-function setSetting(key, value)
-{
-	var stringKey = key.toString();
-	var stringValue = value.toString();
-	var array = stringToArrayBuffer(stringKey + stringValue);
-	dataHeap.set(array);
-	csSetSetting(dataHeap.byteOffset, stringKey.length, stringValue.length);
-}
 
 var myActiveTabId = -1;
 var myCurrentMode = "disabled";
@@ -121,6 +103,8 @@ function setIcon()
 }
 
 var onloadTimeout;
+var modeTimeout;
+
 function setMode(aTabId, aMode)
 {
 	if ((myActiveTabId == aTabId && aMode == "disabled" ) || (myActiveTabId != aTabId && aMode == "enabled"))
@@ -135,11 +119,14 @@ function setMode(aTabId, aMode)
 	if (aMode == "enabled")
 	{
 		myActiveTabId = aTabId;
-		onloadTimeout = setTimeout(VideoFail, 1000);
-		chrome.tabs.executeScript(myActiveTabId, {file: "worker_proxy.js"});
-		chrome.tabs.executeScript(myActiveTabId, {file: "content_script.js"});
+		modeTimeout = setTimeout( function () {
+			onloadTimeout = setTimeout(VideoFail, 1000);
+			chrome.tabs.executeScript(myActiveTabId, {file: "worker_proxy.js"});
+			chrome.tabs.executeScript(myActiveTabId, {file: "content_script.js"});
+
+		}, 1000);
+		tabMessage(myActiveTabId, {cmd: "setmode", mode :"enabled"});
 	}
-	
 	myCurrentMode = aMode;
 }
 
@@ -176,6 +163,10 @@ chrome.runtime.onMessage.addListener(
 	{
 		sendResponse(settings);
 	}
+	else if (request.cmd === "modeset")
+	{
+		clearTimeout(modeTimeout);
+	}
  });
 
 chrome.browserAction.onClicked.addListener(function (tab){toggleEnabled(tab);});	
@@ -200,11 +191,6 @@ chrome.runtime.onInstalled.addListener(function (details)
 function getSettings() {
 	chrome.storage.sync.get(settings, function (items) {
 		settings = items;
-		for (var key in items) {
-			if (cardSpotterLibSettings.indexOf(key) != -1) {
-				setSetting(key, items[key]);
-			}
-		}
 	});
 }
 
