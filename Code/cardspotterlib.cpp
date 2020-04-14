@@ -23,6 +23,7 @@ public:
         const int dbResult = gDatabase.SetSetting(key, value);
         const int queryResult = query.SetSetting(key, value);
         const int result = std::max(dbResult, queryResult);
+//        printf("SetSetting %s, %s, %i\n", key.c_str(), value.c_str(), result);
         return result;
     }
 

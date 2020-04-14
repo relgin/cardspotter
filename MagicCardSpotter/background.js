@@ -19,7 +19,7 @@ var defaultSettings = {
 	detailsTargetWidth:300,
 	autoscreen:true,
 	automatchtimeout:3000,
-	automatchhistorysize:1,
+	automatchhistorysize:3,
 	automatchwidth:0.7,
 	automatchheight:1.0,
 	automatchx:0.15,
@@ -40,6 +40,7 @@ chrome.storage.onChanged.addListener(function(changes, namespace) {
 });
 
 var myActiveTabId = -1;
+let myTabHistory = [];
 var myCurrentMode = "disabled";
 
 function setCurrentTabMode(aMode)
@@ -105,9 +106,17 @@ function setIcon()
 var onloadTimeout;
 var modeTimeout;
 
+function inject()
+{
+	onloadTimeout = setTimeout(VideoFail, 1000);
+	chrome.tabs.executeScript(myActiveTabId, {file: "worker_proxy.js"});
+	chrome.tabs.executeScript(myActiveTabId, {file: "content_script.js"});	
+}
+
 function setMode(aTabId, aMode)
 {
-	if ((myActiveTabId == aTabId && aMode == "disabled" ) || (myActiveTabId != aTabId && aMode == "enabled"))
+	myCurrentMode = aMode;
+	if ((myActiveTabId == aTabId && myCurrentMode == "disabled" ) || (myActiveTabId != aTabId && myCurrentMode == "enabled"))
 	{
 		if (myActiveTabId!=-1)
 		{
@@ -116,18 +125,21 @@ function setMode(aTabId, aMode)
 		}
 	}
 	
-	if (aMode == "enabled")
+	if (myCurrentMode == "enabled")
 	{
 		myActiveTabId = aTabId;
-		modeTimeout = setTimeout( function () {
-			onloadTimeout = setTimeout(VideoFail, 1000);
-			chrome.tabs.executeScript(myActiveTabId, {file: "worker_proxy.js"});
-			chrome.tabs.executeScript(myActiveTabId, {file: "content_script.js"});
+		if (myTabHistory.indexOf(myActiveTabId)==-1)//never seen the tab before, we know we need to inject
+		{
+			myTabHistory.push(myActiveTabId);
+			inject();
+		}
+		else //we've seen the tab before, test it
+		{
+			modeTimeout = setTimeout( inject, 1000);
+			tabMessage(myActiveTabId, {cmd: "setmode", mode :"enabled"});
+		}
 
-		}, 1000);
-		tabMessage(myActiveTabId, {cmd: "setmode", mode :"enabled"});
 	}
-	myCurrentMode = aMode;
 }
 
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab)

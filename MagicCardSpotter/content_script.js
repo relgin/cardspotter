@@ -818,7 +818,10 @@ function ShowResult(result) {
 	var score = result.score;
 
 	var tooltipDiv = document.getElementById("tooltipDiv");
-	BlinkCardRect(result);
+	if (result.isautomatch)
+	{
+		BlinkCardRect(result);
+	}
 
 	if (gSettings.tooltiplogo) {
 		CreateNameBar(tooltipDiv);
@@ -872,7 +875,7 @@ function ShowResult(result) {
 	var tooltipDiv = document.getElementById("tooltipDiv");
 	tooltipDiv.onmouseover = function () {
 		BlinkCardRect(result);
-
+		tooltipDiv.onmouseover = null; //TODO: this prevents flicker
 		var historyList = document.getElementById("HistoryList");
 		while (historyList.firstChild) {
 			historyList.removeChild(historyList.firstChild);
@@ -1130,7 +1133,7 @@ function handleErrorMessage(request, sender, sendResponse) {
 }
 
 function handlePopupOrBackgroundMessage(request, sender, sendResponse) {
-	console.log(request.cmd);
+//	console.log(request.cmd);
 
 	if (request.cmd == "getmode") {
 		if (gCurrentMode == "disabled") {

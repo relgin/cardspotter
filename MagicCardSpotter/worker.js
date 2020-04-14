@@ -16,7 +16,7 @@ CardSpotter().then(function(Module) {
   fetch('magic.db').then((response) => {
     return response.text().then((text) => {
       CS.LoadDatabase(text);
-      CS.SetSetting("automatchhistorysize", "1");
+      CS.SetSetting("automatchhistorysize", "3");
       CS.SetSetting("minCardsize", "7");
       CS.SetSetting("maxCardsize", "20");
       CS.SetSetting("okscore", " 75");
