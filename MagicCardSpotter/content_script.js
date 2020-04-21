@@ -44,8 +44,9 @@ class VideoDetection {
 				console.log("SendTime: " + sendTime.toString() + ", SearchTime: " + searchTime.toString());
 			}
 
+			e.data.result.vs = _this;
 			_this.ConvertToMouseCanvasSpace(e.data.result);
-			ProcessResult(e.data.result);
+			fProcessResult(e.data.result);
 		}
 
 		this.searchStartTime = performance.now();
@@ -54,21 +55,18 @@ class VideoDetection {
 		this.searchState = "done";
 	}
 
-	EnableMouseGrab()
-	{
+	EnableMouseGrab() {
 		let mousegrabcanvas = document.getElementById(this.mousegrabid);
 		mousegrabcanvas.style.zIndex = cDivIndex;
 
 	}
 
-	DisableMouseGrab()
-	{
+	DisableMouseGrab() {
 		let mousegrabcanvas = document.getElementById(this.mousegrabid);
 		mousegrabcanvas.style.zIndex = -1;
 	}
 
-	ClearSearchTimeout()
-	{
+	ClearSearchTimeout() {
 		clearTimeout(this.gTriggerSearchTimeout);
 	}
 
@@ -130,7 +128,7 @@ class VideoDetection {
 	Search(mx, my) {
 		this.searchStartTime = performance.now();
 
-		let { rx, ry } = mouseToVideoRelativeCoords(mx, my);
+		let { rx, ry } = this.MouseToVideoRelativeCoords(mx, my);
 
 		let sx = rx * this.video.videoWidth;
 		let sy = ry * this.video.videoHeight;
@@ -142,13 +140,13 @@ class VideoDetection {
 
 		this.searchTimeout = setTimeout(this.ResetSearch, 5000);
 
-		ImageSearchVideoCopy(this.videoCopy, this.video, sx, sy);
+		fImageSearchVideoCopy(this.videoCopy, this.video, sx, sy);
 
 		const imageData = this.videoCopy.getContext('2d').getImageData(0, 0, this.videoCopy.width, this.videoCopy.height);
 		const uintArray = imageData.data;
 		this.searchWorker.postMessage({ action: 'FIND_CARD', width: this.videoCopy.width, height: this.videoCopy.height, imageData: uintArray, x: sx, y: sy }, [uintArray.buffer]);
 
-		showTooltipSearchImage(sx, sy);
+		fShowTooltipSearchImage(sx, sy);
 
 		this.postMessageTime = performance.now();
 	}
@@ -195,7 +193,7 @@ class VideoDetection {
 				document.body.insertBefore(autocolor, document.body.firstChild);
 			}
 
-			let videoRect = this.getVideoClientRect();
+			let videoRect = this.GetVideoClientRect();
 			let areaWidth = gSettings.automatchwidth * videoRect.width;
 			let areaHeight = gSettings.automatchheight * videoRect.height;
 			let xStart = gSettings.automatchx * videoRect.width;
@@ -219,24 +217,24 @@ class VideoDetection {
 		clearInterval(this.interval);
 
 		let _this = this;
-		this.i = 0, // step counter
-			interval = setInterval(function () {
-				let color = 'rgba(50,50,255,' + ((fadesteps - Math.max(i + fadesteps - steps, 0)) / fadesteps - 1 / fadesteps) + ')';
-				drawRect(rect, color);
-				_this.i++;
-				if (_this.i === steps) { // stop if done
-					let mousegrabcanvas = document.getElementById(_this.mousegrabid);
-					let manualContext = mousegrabcanvas.getContext("2d");
+		this.i = 0;
+		this.interval = setInterval(function () {
+			let color = 'rgba(50,50,255,' + ((fadesteps - Math.max(_this.i + fadesteps - steps, 0)) / fadesteps - 1 / fadesteps) + ')';
+			_this.drawRect(rect, color);
+			_this.i++;
+			if (_this.i === steps) { // stop if done
+				let mousegrabcanvas = document.getElementById(_this.mousegrabid);
+				let manualContext = mousegrabcanvas.getContext("2d");
 
-					manualContext.clearRect(0, 0, mousegrabcanvas.width, mousegrabcanvas.height);
-					clearInterval(_this.interval);
-				}
-			}, 100);
+				manualContext.clearRect(0, 0, mousegrabcanvas.width, mousegrabcanvas.height);
+				clearInterval(_this.interval);
+			}
+		}, 100);
 	}
 
 
 	UpdateCanvasSize() {
-		let videoRect = this.getVideoClientRect();
+		let videoRect = this.GetClientRect();
 
 		if (this.lastVideoRect == null || this.lastVideoRect.top != videoRect.top || this.lastVideoRect.left != videoRect.left || this.lastVideoRect.width != videoRect.width || this.lastVideoRect.height != videoRect.height) {
 			this.lastVideoRect = videoRect;
@@ -257,213 +255,195 @@ class VideoDetection {
 			this.UpdateMouseCanvasSize();
 		}
 	}
-	
+
 	UpdateMouseCanvasSize() {
-	let videoRect = this.getVideoClientRect();
-	let mousegrabcanvas = document.getElementById(this.mousegrabid);
-	mousegrabcanvas.style.position = "absolute";
-	mousegrabcanvas.width = (videoRect.width * (gSettings.clickareawidth - gSettings.clickareax));
-	if (mousegrabcanvas.onmouseover != null) {
-		mousegrabcanvas.width -= cUnblockSettingsWidth;
-	}
-	mousegrabcanvas.height = videoRect.height * (gSettings.clickareaheight - gSettings.clickareay);
-	mousegrabcanvas.style.top = (videoRect.top + videoRect.height * gSettings.clickareay).toString() + "px";
-	mousegrabcanvas.style.left = (videoRect.left + videoRect.width * gSettings.clickareax).toString() + "px";
-	mousegrabcanvas.style.width = (mousegrabcanvas.width).toString() + "px";
-	mousegrabcanvas.style.height = (mousegrabcanvas.height).toString() + "px";
-	mousegrabcanvas.style.zIndex = cDivIndex;
-}
-
-InsertMouseGrabCanvas(mousegrabcanvas) {
-	if (this.IsFullScreen()) {
-		this.video.parentNode.insertBefore(mousegrabcanvas, this.video.parentNode.firstChild);
-	}
-	else {
-		document.body.insertBefore(mousegrabcanvas, document.body.firstChild);
-	}
-}
-
-GetClientToVideoScaleX() {
-	return this.video.videoWidth / this.video.clientWidth;
-}
-GetClientToVideoScaleY() {
-	return this.video.videoHeight / this.video.clientHeight;
-}
-
-MouseToVideoRelativeCoords(mx, my) {
-	let mousegrabcanvas = document.getElementById(this.mousegrabid);
-	let canvasRect = mousegrabcanvas.getBoundingClientRect();
-	let rx = mx / canvasRect.width;
-	let ry = my / canvasRect.height;
-	rx *= (gSettings.clickareawidth - gSettings.clickareax);
-	rx += gSettings.clickareax;
-	ry *= (gSettings.clickareaheight - gSettings.clickareay);
-	ry += gSettings.clickareay;
-	return { rx, ry };
-}
-
-IsFullScreen() {
-	return this.video.scrollWidth > screen.width - 30;
-}
-
-getVideoClientRect() {
-	let rect = this.video.getBoundingClientRect();
-	const xScale = this.GetClientToVideoScaleX();
-	const yScale = this.GetClientToVideoScaleY();
-	if (xScale < yScale) //div is wider than high
-	{
-		const actualWidth = this.video.videoWidth / yScale;//even scale on video so it will use the larger one
-		const diff = rect.width - actualWidth;
-		rect.x = rect.x + (diff / 2.0);
-		rect.width = actualWidth;
-	}
-	return rect;
-}
-
- OnMouseStopped() {
-	this.lastGx = this.gx;
-	this.lastGy = this.gy;
-	Search(this.gx, this.gy);
-}
-
-UseMouseOver() {
-	if (this.fullScreen || gSettings.mousemode == "mouseover") {
-		let tooltipDiv = document.getElementById("tooltipDiv");
-		if (tooltipDiv != null && tooltipDiv.style.visibility == 'visible') {
-			let tooltipRect = tooltipDiv.getBoundingClientRect();
-			let mousegrabcanvas = document.getElementById(this.mousegrabid);
-			let canvasRect = mousegrabcanvas.getBoundingClientRect();
-
-			let mx = gx + canvasRect.left;
-			let my = gy + canvasRect.top;
-			if (tooltipRect.left < mx && tooltipRect.right > mx && tooltipRect.top < my && tooltipRect.bottom > my) {
-				return false;
-			}
+		let videoRect = this.GetClientRect();
+		let mousegrabcanvas = document.getElementById(this.mousegrabid);
+		mousegrabcanvas.style.position = "absolute";
+		mousegrabcanvas.width = (videoRect.width * (gSettings.clickareawidth - gSettings.clickareax));
+		if (mousegrabcanvas.onmouseover != null) {
+			mousegrabcanvas.width -= cUnblockSettingsWidth;
 		}
-		return true;
+		mousegrabcanvas.height = videoRect.height * (gSettings.clickareaheight - gSettings.clickareay);
+		mousegrabcanvas.style.top = (videoRect.top + videoRect.height * gSettings.clickareay).toString() + "px";
+		mousegrabcanvas.style.left = (videoRect.left + videoRect.width * gSettings.clickareax).toString() + "px";
+		mousegrabcanvas.style.width = (mousegrabcanvas.width).toString() + "px";
+		mousegrabcanvas.style.height = (mousegrabcanvas.height).toString() + "px";
+		mousegrabcanvas.style.zIndex = cDivIndex;
 	}
-	return false;
-}
 
-UseMouseClick() {
-	return !this.fullScreen && gSettings.mousemode == "click";
-}
-
-OnMouseMove(e) {
-	this.gx = e.offsetX;
-	this.gy = e.offsetY;
-
-	clearTimeout(this.gTriggerSearchTimeout);
-
-	let dx = this.lastGx - this.gx;
-	let dy = this.lastGy - this.gy;
-
-	if (this.UseMouseOver()) {
-		if ((dx * dx + dy * dy) > (15 * 15)) {
-			let _this = this;
-			this.gTriggerSearchTimeout = setTimeout(function() { _this.OnMouseStopped }, 50);
+	InsertMouseGrabCanvas(mousegrabcanvas) {
+		if (this.IsFullScreen()) {
+			this.video.parentNode.insertBefore(mousegrabcanvas, this.video.parentNode.firstChild);
+		}
+		else {
+			document.body.insertBefore(mousegrabcanvas, document.body.firstChild);
 		}
 	}
-}
 
-OnMouseDown(e) {
-	if (this.UseMouseClick()) {
-		this.gx = e.offsetX;
-		this.gy = e.offsetY;
+	MouseToVideoRelativeCoords(mx, my) {
+		let mousegrabcanvas = document.getElementById(this.mousegrabid);
+		let canvasRect = mousegrabcanvas.getBoundingClientRect();
+		let rx = mx / canvasRect.width;
+		let ry = my / canvasRect.height;
+		rx *= (gSettings.clickareawidth - gSettings.clickareax);
+		rx += gSettings.clickareax;
+		ry *= (gSettings.clickareaheight - gSettings.clickareay);
+		ry += gSettings.clickareay;
+		return { rx, ry };
+	}
+
+	IsFullScreen() {
+		return this.video.scrollWidth > screen.width - 30;
+	}
+
+	GetClientRect() {
+		return fGetVideoClientRect(this.video);
+	}
+
+	OnMouseStopped() {
 		this.lastGx = this.gx;
 		this.lastGy = this.gy;
-		this.Search(this.gx, this.gy);
+		Search(this.gx, this.gy);
 	}
-}
 
-OnMouseOver() {
-	let mousegrabcanvas = document.getElementById(this.mousegrabid);
-	let _this = this;
-	mousegrabcanvas.onmouseover = null;
-	mousegrabcanvas.onmousemove = function(e) { _this.OnMouseMove(e) };
-	mousegrabcanvas.onmousedown = function(e) { _this.OnMouseDown(e) };
-	mousegrabcanvas.onmouseout = function() { _this.OnMouseOut() };
-	this.UpdateMouseCanvasSize();
-}
+	UseMouseOver() {
+		if (this.fullScreen || gSettings.mousemode == "mouseover") {
+			let tooltipDiv = document.getElementById("tooltipDiv");
+			if (tooltipDiv != null && tooltipDiv.style.visibility == 'visible') {
+				let tooltipRect = tooltipDiv.getBoundingClientRect();
+				let mousegrabcanvas = document.getElementById(this.mousegrabid);
+				let canvasRect = mousegrabcanvas.getBoundingClientRect();
 
-OnMouseOut() {
-	let mousegrabcanvas = document.getElementById(this.mousegrabid);
-	let _this = this;
-	mousegrabcanvas.onmouseover = function(e) { _this.OnMouseOver(e) };
-	mousegrabcanvas.onmousemove = null;
-	mousegrabcanvas.onmousedown = null;
-	mousegrabcanvas.onmouseout = null;
-	this.UpdateMouseCanvasSize();
-	clearTimeout(this.gTriggerSearchTimeout);
-}
-
-AddMouseOver()
-{
-	let mousegrabcanvas = document.getElementById(this.mousegrabid);
-	let _this = this;
-	mousegrabcanvas.onmouseover = function(e) { _this.OnMouseOver(e) };
-}
-
-ConvertToMouseCanvasSpace(result) {
-	const xScale = this.GetClientToVideoScaleX();
-	const yScale = this.GetClientToVideoScaleY();
-	const videoToClientScale = (xScale > yScale) ? xScale : yScale;
-	let rect = [{ x: result.px0, y: result.py0 }, { x: result.px1, y: result.py1 }, { x: result.px2, y: result.py2 }, { x: result.px3, y: result.py3 }];
-	const inverseScale = this.video.videoHeight / cExpectedVideoHeight;
-
-	if (result.rescale == undefined)
-		result.rescale = 1.0;
-
-	for (let i = 0; i < 4; i++) {
-		rect[i].x *= result.rescale; //internal rescale cardspotter side.. maybe that should already be compensated for?
-		rect[i].x += result.pointx; //add roi start (to full input)
-		rect[i].x *= inverseScale; //descale downsample (at scale)
-		if (result.isautomatch) {
-			rect[i].x += gSettings.automatchx * this.video.videoWidth; //offset (now in video space)
+				let mx = gx + canvasRect.left;
+				let my = gy + canvasRect.top;
+				if (tooltipRect.left < mx && tooltipRect.right > mx && tooltipRect.top < my && tooltipRect.bottom > my) {
+					return false;
+				}
+			}
+			return true;
 		}
-		rect[i].x -= gSettings.clickareax * this.video.videoWidth; //offset (now in video canvas space)
-
-		rect[i].x /= videoToClientScale; //videoToClient
-		rect[i].y *= result.rescale;
-		rect[i].y += result.pointy; //add roi start
-		rect[i].y *= inverseScale; //descale downsample
-		if (result.isautomatch) {
-			rect[i].y += gSettings.automatchy * this.video.videoHeight; //offset
-		}
-		rect[i].y -= gSettings.clickareay * this.video.videoHeight; //offset (now in video canvas space)
-		rect[i].y /= videoToClientScale; //videoToClient
+		return false;
 	}
-	result.px0 = rect[0].x;
-	result.py0 = rect[0].y;
-	result.px1 = rect[1].x;
-	result.py1 = rect[1].y;
-	result.px2 = rect[2].x;
-	result.py2 = rect[2].y;
-	result.px3 = rect[3].x;
-	result.py3 = rect[3].y;
-}
 
-drawRect(rect, color) {
-	let box = {};
-	box.minx = Math.min(rect[0].x, rect[1].x, rect[2].x, rect[3].x);
-	box.maxx = Math.max(rect[0].x, rect[1].x, rect[2].x, rect[3].x);
-	box.miny = Math.min(rect[0].y, rect[1].y, rect[2].y, rect[3].y);
-	box.maxy = Math.max(rect[0].y, rect[1].y, rect[2].y, rect[3].y);
+	UseMouseClick() {
+		return !this.fullScreen && gSettings.mousemode == "click";
+	}
 
-	let mousegrabcanvas = document.getElementById(this.mousegrabid);
-	let manualContext = mousegrabcanvas.getContext("2d");
-	//RECTS ARE IN VIDEOSPACE?
-	manualContext.clearRect(0, 0, mousegrabcanvas.width, mousegrabcanvas.height);
-	manualContext.beginPath();
-	manualContext.moveTo(rect[0].x, rect[0].y);
-	manualContext.lineTo(rect[1].x, rect[1].y);
-	manualContext.lineTo(rect[2].x, rect[2].y);
-	manualContext.lineTo(rect[3].x, rect[3].y);
-	manualContext.lineTo(rect[0].x, rect[0].y);
-	manualContext.lineWidth = 6;
-	manualContext.strokeStyle = color;
-	manualContext.stroke();
-}
+	OnMouseMove(e) {
+		this.gx = e.offsetX;
+		this.gy = e.offsetY;
+
+		clearTimeout(this.gTriggerSearchTimeout);
+
+		let dx = this.lastGx - this.gx;
+		let dy = this.lastGy - this.gy;
+
+		if (this.UseMouseOver()) {
+			if ((dx * dx + dy * dy) > (15 * 15)) {
+				let _this = this;
+				this.gTriggerSearchTimeout = setTimeout(function () { _this.OnMouseStopped }, 50);
+			}
+		}
+	}
+
+	OnMouseDown(e) {
+		if (this.UseMouseClick()) {
+			this.gx = e.offsetX;
+			this.gy = e.offsetY;
+			this.lastGx = this.gx;
+			this.lastGy = this.gy;
+			this.Search(this.gx, this.gy);
+		}
+	}
+
+	OnMouseOver() {
+		let mousegrabcanvas = document.getElementById(this.mousegrabid);
+		let _this = this;
+		mousegrabcanvas.onmouseover = null;
+		mousegrabcanvas.onmousemove = function (e) { _this.OnMouseMove(e) };
+		mousegrabcanvas.onmousedown = function (e) { _this.OnMouseDown(e) };
+		mousegrabcanvas.onmouseout = function () { _this.OnMouseOut() };
+		this.UpdateMouseCanvasSize();
+	}
+
+	OnMouseOut() {
+		let mousegrabcanvas = document.getElementById(this.mousegrabid);
+		let _this = this;
+		mousegrabcanvas.onmouseover = function (e) { _this.OnMouseOver(e) };
+		mousegrabcanvas.onmousemove = null;
+		mousegrabcanvas.onmousedown = null;
+		mousegrabcanvas.onmouseout = null;
+		this.UpdateMouseCanvasSize();
+		clearTimeout(this.gTriggerSearchTimeout);
+	}
+
+	AddMouseOver() {
+		let mousegrabcanvas = document.getElementById(this.mousegrabid);
+		let _this = this;
+		mousegrabcanvas.onmouseover = function (e) { _this.OnMouseOver(e) };
+	}
+
+	ConvertToMouseCanvasSpace(result) {
+		const xScale = fGetClientToVideoScaleX(this.video);
+		const yScale = fGetClientToVideoScaleY(this.video);
+		const videoToClientScale = (xScale > yScale) ? xScale : yScale;
+		let rect = [{ x: result.px0, y: result.py0 }, { x: result.px1, y: result.py1 }, { x: result.px2, y: result.py2 }, { x: result.px3, y: result.py3 }];
+		const inverseScale = this.video.videoHeight / cExpectedVideoHeight;
+
+		if (result.rescale == undefined)
+			result.rescale = 1.0;
+
+		for (let i = 0; i < 4; i++) {
+			rect[i].x *= result.rescale; //internal rescale cardspotter side.. maybe that should already be compensated for?
+			rect[i].x += result.pointx; //add roi start (to full input)
+			rect[i].x *= inverseScale; //descale downsample (at scale)
+			if (result.isautomatch) {
+				rect[i].x += gSettings.automatchx * this.video.videoWidth; //offset (now in video space)
+			}
+			rect[i].x -= gSettings.clickareax * this.video.videoWidth; //offset (now in video canvas space)
+
+			rect[i].x /= videoToClientScale; //videoToClient
+			rect[i].y *= result.rescale;
+			rect[i].y += result.pointy; //add roi start
+			rect[i].y *= inverseScale; //descale downsample
+			if (result.isautomatch) {
+				rect[i].y += gSettings.automatchy * this.video.videoHeight; //offset
+			}
+			rect[i].y -= gSettings.clickareay * this.video.videoHeight; //offset (now in video canvas space)
+			rect[i].y /= videoToClientScale; //videoToClient
+		}
+		result.px0 = rect[0].x;
+		result.py0 = rect[0].y;
+		result.px1 = rect[1].x;
+		result.py1 = rect[1].y;
+		result.px2 = rect[2].x;
+		result.py2 = rect[2].y;
+		result.px3 = rect[3].x;
+		result.py3 = rect[3].y;
+	}
+
+	drawRect(rect, color) {
+		let box = {};
+		box.minx = Math.min(rect[0].x, rect[1].x, rect[2].x, rect[3].x);
+		box.maxx = Math.max(rect[0].x, rect[1].x, rect[2].x, rect[3].x);
+		box.miny = Math.min(rect[0].y, rect[1].y, rect[2].y, rect[3].y);
+		box.maxy = Math.max(rect[0].y, rect[1].y, rect[2].y, rect[3].y);
+
+		let mousegrabcanvas = document.getElementById(this.mousegrabid);
+		let manualContext = mousegrabcanvas.getContext("2d");
+		//RECTS ARE IN VIDEOSPACE?
+		manualContext.clearRect(0, 0, mousegrabcanvas.width, mousegrabcanvas.height);
+		manualContext.beginPath();
+		manualContext.moveTo(rect[0].x, rect[0].y);
+		manualContext.lineTo(rect[1].x, rect[1].y);
+		manualContext.lineTo(rect[2].x, rect[2].y);
+		manualContext.lineTo(rect[3].x, rect[3].y);
+		manualContext.lineTo(rect[0].x, rect[0].y);
+		manualContext.lineWidth = 6;
+		manualContext.strokeStyle = color;
+		manualContext.stroke();
+	}
 }
 
 var gUpdateTimeout;
@@ -493,7 +473,7 @@ var cardSpotterLibSettings = [
 ];
 
 
-function UpdateMouseSearchHighlight() {
+function fUpdateMouseSearchHighlight() {
 	let mini = document.getElementById("mini");
 	if (mini != null) {
 		if (!gSettings.mousemodeenabled) {
@@ -517,12 +497,12 @@ function UpdateMouseSearchHighlight() {
 
 }
 
-function UpdateSettings(callback) {
+function fUpdateSettings(callback) {
 	let wasAutoscreen = gSettings != undefined && gSettings.autoscreen != undefined && gSettings.autoscreen; //misses if we enable/disable on the same video
 	chrome.storage.sync.get(null, function (items) {
 		gSettings = items;
-		updateAutoScreenHighlight();
-		UpdateMouseSearchHighlight();
+		fUpdateAutoScreenHighlight();
+		fUpdateMouseSearchHighlight();
 		if (gSettings.autoscreen && !wasAutoscreen) {
 
 			videoSearchers.forEach(function (vs) {
@@ -551,7 +531,7 @@ function UpdateSettings(callback) {
 
 
 
-function saveHistory() {
+function fSaveHistory() {
 	var miniHistory = [];
 	for (let i = 0; i < resultHistory.length; i++) {
 		let result = resultHistory[i];
@@ -569,7 +549,7 @@ function saveHistory() {
 	vLink.click();
 }
 
-function Update() {
+function fUpdate() {
 	if (gCurrentMode == "disabled") {
 		return;
 	}
@@ -577,12 +557,12 @@ function Update() {
 	videoSearchers.forEach(function (vs) {
 		vs.UpdateCanvasSize();
 	});
-	
-	UpdateSettings(function () { gUpdateTimeout = setTimeout(Update, 500); });
+
+	fUpdateSettings(function () { gUpdateTimeout = setTimeout(fUpdate, 500); });
 }
 
 
-function setPixel(imageData, x, y, r, g, b, a) {
+function fSetPixel(imageData, x, y, r, g, b, a) {
 	index = (x + y * imageData.width) * 4;
 	imageData.data[index + 0] = r;
 	imageData.data[index + 1] = g;
@@ -590,7 +570,7 @@ function setPixel(imageData, x, y, r, g, b, a) {
 	imageData.data[index + 3] = a;
 }
 
-function ClearTooltipDiv() {
+function fClearTooltipDiv() {
 	let tooltipDiv = document.getElementById("tooltipDiv");
 	if (tooltipDiv != null) {
 		while (tooltipDiv.firstChild) {
@@ -599,7 +579,7 @@ function ClearTooltipDiv() {
 	}
 }
 
-function showTooltipSearchImage(sx, sy) {
+function fShowTooltipSearchImage(sx, sy) {
 	let tooltipImage = document.getElementById("TooltipImage");
 	if (tooltipImage != null) {
 		let debugImage = document.getElementById("debugImage");
@@ -610,7 +590,7 @@ function showTooltipSearchImage(sx, sy) {
 			debugImage.width = tooltipImage.width - 16;
 		}
 		if (debugImage != null) {
-			ImageSearchVideoCopy(debugImage, toolTipParent, sx, sy);
+			fImageSearchVideoCopy(debugImage, firstVideo, sx, sy);
 			let searchImage = tooltipImage.cloneNode(false);
 			searchImage.id = "searchImage";
 			searchImage.src = debugImage.toDataURL("image/png");
@@ -621,7 +601,7 @@ function showTooltipSearchImage(sx, sy) {
 }
 
 
-function clearState() {
+function fClearState() {
 	videoSearchers.forEach(function (vs) {
 		vs.ClearSearchTimeout();
 	});
@@ -629,16 +609,16 @@ function clearState() {
 	gSearchState = "done";
 }
 
-function Length(vec) {
+function fLength(vec) {
 	return Math.sqrt(vec.x * vec.x + vec.y * vec.y);
 }
 
-function RotateVector(vec, deg) {
+function fRotateVector(vec, deg) {
 	let rad = deg * (Math.PI / 180)
 	return { x: vec.x * Math.cos(rad) - vec.y * Math.sin(rad), y: vec.x * Math.sin(rad) + vec.y * Math.cos(rad) };
 }
 
-function ImageSearchVideoCopy(canvas, video, px, py) {
+function fImageSearchVideoCopy(canvas, video, px, py) {
 	let scale = cExpectedVideoHeight / video.videoHeight;
 	canvas.height = scale * video.videoHeight * Math.min(1.0, (gSettings.maxcardsize / 100.0) * 2.0);
 	canvas.width = canvas.height;
@@ -648,7 +628,7 @@ function ImageSearchVideoCopy(canvas, video, px, py) {
 	copyContext.drawImage(video, px - canvas.width * 0.5 / scale, py - canvas.height * 0.5 / scale, canvas.width / scale, canvas.height / scale, 0, 0, canvas.width, canvas.height);
 }
 
-function updateAutoScreenHighlight() {
+function fUpdateAutoScreenHighlight() {
 	let csrenew = document.getElementById("csrenew");
 	if (csrenew != null) {
 		if (!gSettings.autoscreen) {
@@ -660,7 +640,7 @@ function updateAutoScreenHighlight() {
 	}
 }
 
-function CreateMenu() {
+function fCreateMenu() {
 	let namediv = document.getElementById("namediv");
 
 	let bottom = document.createElement("div");
@@ -676,14 +656,14 @@ function CreateMenu() {
 	mini.id = "mini";
 	mini.classList.add("mdi", "mdi-mouse", "mdi-18px");
 
-	UpdateMouseSearchHighlight();
+	fUpdateMouseSearchHighlight();
 
 	mini.onclick = function () {
 		chrome.storage.sync.set(
 			{
 				mousemodeenabled: !gSettings.mousemodeenabled
 
-			}, UpdateMouseSearchHighlight);
+			}, fUpdateMouseSearchHighlight);
 	}
 	menuDiv.appendChild(mini);
 
@@ -691,7 +671,7 @@ function CreateMenu() {
 	csrenew.id = "csrenew";
 	csrenew.classList.add("mdi", "mdi-autorenew", "mdi-18px");
 	csrenew.title = "Toggle automatic tooltip";
-	updateAutoScreenHighlight();
+	fUpdateAutoScreenHighlight();
 
 	csrenew.onclick = function () {
 		if (!gSettings.autoscreen)
@@ -701,7 +681,7 @@ function CreateMenu() {
 			{
 				autoscreen: !gSettings.autoscreen
 
-			}, updateAutoScreenHighlight);
+			}, fUpdateAutoScreenHighlight);
 	}
 
 	menuDiv.appendChild(csrenew);
@@ -719,12 +699,12 @@ function CreateMenu() {
 		cssave.id = "cssave";
 		cssave.title = "Save match history to file.";
 		cssave.classList.add("mdi", "mdi-content-save", "mdi-18px", "mdi-flip-horizontal");
-		cssave.onclick = function () { saveHistory(); }
+		cssave.onclick = function () { fSaveHistory(); }
 		menuDiv.appendChild(cssave);
 	}
 }
 
-function Setup() {
+function fSetup() {
 
 	videoSearchers.forEach(function (vs) {
 		vs.Setup();
@@ -735,21 +715,21 @@ function Setup() {
 		namediv = document.createElement("div");
 		namediv.id = "namediv";
 
-		if (toolTipParent != null)//fullScreen)
+		if (firstVideo != null)//fullScreen)
 		{
-			toolTipParent.parentNode.insertBefore(namediv, toolTipParent.parentNode.firstChild);
+			firstVideo.parentNode.insertBefore(namediv, firstVideo.parentNode.firstChild);
 		}
 		else {
 			document.body.insertBefore(namediv, document.body.firstChild);
 		}
-		CreateMenu();
+		fCreateMenu();
 
 		let menudiv = document.getElementById("CardSpotterMenu");
 		menudiv.className = "CardSpotterMenu CardSpotterMenuBig";
 	}
 }
 
-function Teardown() {
+function fTeardown() {
 	clearTimeout(gUpdateTimeout);
 	//	chrome.runtime.onMessage.removeListener(handlePopupOrBackgroundMessage);
 	let namediv = document.getElementById("namediv");
@@ -766,24 +746,24 @@ function Teardown() {
 	}
 }
 
-function SetMode(aMode) {
+function fSetMode(aMode) {
 
 	if (gCurrentMode == aMode) {
 		return;
 	}
 
-	clearState();
+	fClearState();
 
 	if (aMode == "disabled") {
 		gCurrentMode = aMode;
-		Teardown();
+		fTeardown();
 		return;
 	}
 
 	if (gCurrentMode == "disabled") {
-		Setup();
+		fSetup();
 		gCurrentMode = aMode;
-		Update();
+		fUpdate();
 	}
 
 	gCurrentMode = aMode;
@@ -794,7 +774,7 @@ function SetMode(aMode) {
 
 }
 
-function SetCanvasImage(inputCanvas, request) {
+function fSetCanvasImage(inputCanvas, request) {
 	let view = new Uint8Array(request.imgdata);
 
 	let height = request.height;
@@ -818,7 +798,7 @@ function SetCanvasImage(inputCanvas, request) {
 			if (r == undefined || g == undefined || b == undefined) {
 				continue;
 			}
-			setPixel(imageData, x, y, r, g, b, 255); // 255 opaque
+			fSetPixel(imageData, x, y, r, g, b, 255); // 255 opaque
 		}
 	}
 	context.putImageData(imageData, 0, 0); // at coords 0,0
@@ -826,7 +806,7 @@ function SetCanvasImage(inputCanvas, request) {
 
 var imageCache = {};
 
-function getImage(multiverseid, imageurl, usename, cardName, callback) {
+function fGetImage(multiverseid, imageurl, usename, cardName, callback) {
 	let img = imageCache[imageurl];
 	if (img == undefined || usename) {
 		img = new Image();
@@ -839,7 +819,7 @@ function getImage(multiverseid, imageurl, usename, cardName, callback) {
 	callback(img);
 }
 
-function TooltipAddText(list, text) {
+function fTooltipAddText(list, text) {
 	let entry = document.createElement("li");
 	entry.className = "CardSpotter";
 	entry.appendChild(document.createTextNode(text));
@@ -847,7 +827,7 @@ function TooltipAddText(list, text) {
 	return entry;
 }
 
-function TooltipAddLink(list, url, title, text) {
+function fTooltipAddLink(list, url, title, text) {
 	let entry = document.createElement("li");
 	entry.className = "CardSpotter";
 	let link = document.createElement("a");
@@ -860,7 +840,7 @@ function TooltipAddLink(list, url, title, text) {
 	list.appendChild(entry);
 }
 
-function TooltipCreateBigImageLi() {
+function fTooltipCreateBigImageLi() {
 	let list = document.getElementById("TooltipList");
 	let entry = document.createElement("li");
 	entry.className = "CardSpotter";
@@ -869,7 +849,7 @@ function TooltipCreateBigImageLi() {
 	return entry;
 }
 
-function TooltipAddQualityItem(list, scoreNumber) {
+function fTooltipAddQualityItem(list, scoreNumber) {
 	let confidence = Math.round(100 - ((100 * scoreNumber) / 1024));
 	if (confidence > 98) {
 		return;
@@ -887,12 +867,12 @@ function TooltipAddQualityItem(list, scoreNumber) {
 
 var interval;
 
-function BlinkCardRect(result) {
+function fBlinkCardRect(result) {
 	let rect = [{ x: result.px0, y: result.py0 }, { x: result.px1, y: result.py1 }, { x: result.px2, y: result.py2 }, { x: result.px3, y: result.py3 }];
-	fadeOutRectangle(rect);
+	result.vs.fadeOutRectangle(rect);
 }
 
-function getImageUrl(coreUrl) {
+function fGetImageUrl(coreUrl) {
 	let cUseLocalImages = false;
 	if (cUseLocalImages) {
 		return extensionUrl + "images/" + coreUrl + ".png";
@@ -904,29 +884,29 @@ function getImageUrl(coreUrl) {
 	return "https://img.scryfall.com/cards/png/" + coreUrl + ".png";
 }
 
-function ShowResult(result) {
-	CreateTooltipDiv();
+function fShowResult(result) {
+	fCreateTooltipDiv();
 
 	let id = result.id;
 	let cardName = result.name;
 	let setcode = result.setcode;
-	let imageurl = getImageUrl(result.url);
+	let imageurl = fGetImageUrl(result.url);
 	let score = result.score;
 
 	let tooltipDiv = document.getElementById("tooltipDiv");
 	if (result.isautomatch) {
-		BlinkCardRect(result);
+		fBlinkCardRect(result);
 	}
 
 	if (gSettings.tooltiplogo) {
-		CreateNameBar(tooltipDiv);
+		fCreateNameBar(tooltipDiv);
 	}
 
-	let imgEntry = TooltipCreateBigImageLi();
+	let imgEntry = fTooltipCreateBigImageLi();
 
 	if (id != undefined) {
 		let usename = id < 0;
-		getImage(id, imageurl, usename, cardName, function (img) {
+		fGetImage(id, imageurl, usename, cardName, function (img) {
 			img.className = "CardSpotter";
 			img.id = "TooltipImage";
 			imgEntry.appendChild(img);
@@ -942,16 +922,16 @@ function ShowResult(result) {
 	}
 
 	if (score <= 0) {
-		TooltipAddText(document.getElementById("TooltipList"), cardName);
+		fTooltipAddText(document.getElementById("TooltipList"), cardName);
 		return;
 	}
 
 	if (gSettings.debugview) {
 		let path = (result.path == undefined) ? "?" : result.path;
-		let sendTime = (result.isautomatch) ? autoPostMessageTime - autoSearchStartTime : postMessageTime - searchStartTime;
+		let sendTime = (result.isautomatch) ? result.vs.autoPostMessageTime - result.vs.autoSearchStartTime : result.vs.postMessageTime - result.vs.searchStartTime;
 		let now = performance.now();
-		let searchTime = now - ((result.isautomatch) ? autoPostMessageTime : postMessageTime);
-		TooltipAddText(document.getElementById("TooltipList"), "SendTime: " + sendTime.toString() + ", SearchTime: " + searchTime.toString() + ", Score: " + score.toString() + ", Path: " + path.toString());
+		let searchTime = now - ((result.isautomatch) ? result.vs.autoPostMessageTime : result.vs.postMessageTime);
+		fTooltipAddText(document.getElementById("TooltipList"), "SendTime: " + sendTime.toString() + ", SearchTime: " + searchTime.toString() + ", Score: " + score.toString() + ", Path: " + path.toString());
 	}
 
 	if (gSettings.tooltipscryfall) {
@@ -963,12 +943,12 @@ function ShowResult(result) {
 		linkList.id = "LinkList";
 		tooltipList.appendChild(li);
 
-		TooltipAddQualityItem(linkList, score);
-		TooltipAddLink(linkList, "https://scryfall.com/card/" + encodeURIComponent(setcode) + "/" + id, "Scryfall", "Scryfall");
+		fTooltipAddQualityItem(linkList, score);
+		fTooltipAddLink(linkList, "https://scryfall.com/card/" + encodeURIComponent(setcode) + "/" + id, "Scryfall", "Scryfall");
 	}
 
 	tooltipDiv.onmouseover = function () {
-		BlinkCardRect(result);
+		fBlinkCardRect(result);
 		tooltipDiv.onmouseover = null; //TODO: this prevents flicker
 		let historyList = document.getElementById("HistoryList");
 		while (historyList.firstChild) {
@@ -976,15 +956,15 @@ function ShowResult(result) {
 		}
 
 		if (gSettings.showhistory) {
-			PopulateHistoryList(historyList);
+			fPopulateHistoryList(historyList);
 		}
 	}
 }
 
-function PopulateHistoryList(historyList) {
+function fPopulateHistoryList(historyList) {
 	let row;
 	let c = 0;
-	function showHistoricalResult(h) { return function () { let r2 = resultHistory[h]; ShowResult(r2); }; }
+	function showHistoricalResult(h) { return function () { let r2 = resultHistory[h]; fShowResult(r2); }; }
 	;
 	for (let i = Math.max(0, resultHistory.length - 10); i < resultHistory.length; i++) {
 		if (c % 5 == 0) {
@@ -992,7 +972,7 @@ function PopulateHistoryList(historyList) {
 			historyList.appendChild(row);
 		}
 		let r = resultHistory[i];
-		let img = imageCache[getImageUrl(r.url)];
+		let img = imageCache[fGetImageUrl(r.url)];
 		if (img != undefined) {
 			let historyImg = img.cloneNode(false);
 			historyImg.className = "HistoryList";
@@ -1004,7 +984,7 @@ function PopulateHistoryList(historyList) {
 	historyList.style.visibility = 'visible';
 }
 
-function CreateNameBar(tooltipDiv) {
+function fCreateNameBar(tooltipDiv) {
 	let list = document.getElementById("TooltipList");
 	let entry = document.createElement("li");
 	entry.className = "CardSpotter Move";
@@ -1036,7 +1016,27 @@ function CreateNameBar(tooltipDiv) {
 	};
 }
 
-function CreateTooltipDiv() {
+function fGetClientToVideoScaleX(video) {
+	return video.videoWidth / video.clientWidth;
+}
+function fGetClientToVideoScaleY(video) {
+	return video.videoHeight / video.clientHeight;
+}
+function fGetVideoClientRect(video) {
+	let rect = video.getBoundingClientRect();
+	const xScale = fGetClientToVideoScaleX(video);
+	const yScale = fGetClientToVideoScaleY(video);
+	if (xScale < yScale) //div is wider than high
+	{
+		const actualWidth = video.videoWidth / yScale;//even scale on video so it will use the larger one
+		const diff = rect.width - actualWidth;
+		rect.x = rect.x + (diff / 2.0);
+		rect.width = actualWidth;
+	}
+	return rect;
+}
+
+function fCreateTooltipDiv() {
 	let tooltipDiv = document.getElementById("tooltipDiv");
 	if (tooltipDiv != null)//insanity
 	{
@@ -1088,25 +1088,25 @@ function CreateTooltipDiv() {
 		}
 
 		if (gSettings.vertical == "top") {
-			let videoRect = toolTipParent.getBoundingClientRect();
+			let videoRect = firstVideo.getBoundingClientRect();
 			tooltipDiv.style.top = (videoRect.height * gSettings.clickareay).toString() + "px";
 		}
 		else {
 			tooltipDiv.style.bottom = "0px";
 		}
 
-		if (tooltipDiv.parentNode == null || tooltipDiv.parentNode != toolTipParent.parentNode) {
+		if (tooltipDiv.parentNode == null || tooltipDiv.parentNode != firstVideo.parentNode) {
 			if (tooltipDiv.parentNode != null) {
 				tooltipDiv.parentNode.removeChild(tooltipDiv);
 			}
-			toolTipParent.parentNode.insertBefore(tooltipDiv, toolTipParent.parentNode.firstChild);
+			firstVideo.parentNode.insertBefore(tooltipDiv, firstVideo.parentNode.firstChild);
 		}
 	}
 	else //on the outside if possible
 	{
 		let transformScale = gSettings.detailsTargetWidth / cDetailsBaseWidth;
 		tooltipDiv.style.transform = "Translate(" + gSettings.offsetx + "px," + gSettings.offsety + "px) Scale(" + transformScale.toString() + ")";
-		let videoRect = getVideoClientRect();
+		let videoRect = fGetVideoClientRect(firstVideo);
 		if (gSettings.mouseanchor) {
 			tooltipDiv.style.left = (gx + cDetailsBaseWidth).toString() + "px";
 			tooltipDiv.style.top = Math.max(videoRect.top + gy - cDetailsBaseHeight, 0).toString() + "px";
@@ -1130,7 +1130,7 @@ function CreateTooltipDiv() {
 			}
 		}
 
-		if (tooltipDiv.parentNode == null || tooltipDiv.parentNode == toolTipParent.parentNode) {
+		if (tooltipDiv.parentNode == null || tooltipDiv.parentNode == firstVideo.parentNode) {
 			if (tooltipDiv.parentNode != null) {
 				tooltipDiv.parentNode.removeChild(tooltipDiv);
 			}
@@ -1141,15 +1141,15 @@ function CreateTooltipDiv() {
 	tooltipDiv.style.visibility = 'visible';
 }
 
-function ShowError(error) {
-	ShowResult({
+function fShowError(error) {
+	fShowResult({
 		id: 0,
 		name: error,
 		score: 0
 	});
 }
 
-function downloadSearchImage(result) {
+function fDownloadSearchImage(result) {
 	let searchImage = document.getElementById("searchImage");
 	if (searchImage != null) {
 		let downloadLink = document.createElement("a");
@@ -1162,7 +1162,7 @@ function downloadSearchImage(result) {
 	}
 }
 
-function ProcessResult(result) {
+function fProcessResult(result) {
 	lastresultstime = performance.now();
 
 	if (result == undefined) {
@@ -1174,25 +1174,25 @@ function ProcessResult(result) {
 	}
 
 	if (gSettings.debugview && !result.isautomatch) {
-		downloadSearchImage(result.name);
+		fDownloadSearchImage(result.name);
 	}
 
 	if (!result.success) {
 		return;
 	}
 
-	ShowResult(result);
+	fShowResult(result);
 }
 
 
 
-function handleErrorMessage(request, sender, sendResponse) {
+function fHandleErrorMessage(request, sender, sendResponse) {
 	if (request.cmd == "novideo") {
 		alert("CardSpotter - No HTML5 Video found.");
 	}
 }
 
-function handlePopupOrBackgroundMessage(request, sender, sendResponse) {
+function fHandlePopupOrBackgroundMessage(request, sender, sendResponse) {
 	//	console.log(request.cmd);
 
 	if (request.cmd == "getmode") {
@@ -1204,14 +1204,14 @@ function handlePopupOrBackgroundMessage(request, sender, sendResponse) {
 		}
 	}
 	else if (request.cmd == "setmode") {
-		SetMode(request.mode);
+		fSetMode(request.mode);
 		chrome.runtime.sendMessage({ cmd: "modeset" });
 	}
 	else if (request.cmd == "log") {
 		console.log(request.log);
 	}
 	else if (request.cmd == "crash") {
-		SetMode("disabled");
+		fSetMode("disabled");
 		alert('CardSpotter has crashed - attempting automated extension reload.\nCardSpotter needs to be manually re-enabled.\nPlease report this to jonas@cardspotter.com');
 	}
 	else if (request.cmd == "showresults") //we always get results, both from clicksearch and auto
@@ -1220,54 +1220,58 @@ function handlePopupOrBackgroundMessage(request, sender, sendResponse) {
 	}
 }
 
-function getVideos(videoTags) {
+function fGetVideos(videoTags) {
 	let videos = [];
 	for (let i = 0; i < videoTags.length; i++) {
 		let video = videoTags.item(i);
 		if (video.clientWidth > 250 && video.clientHeight > 150) {
 			videos.push(video);
-			break; //for now we ONLY do one video
+			if (!gSettings.multivideo)
+			{
+				break;
+			}
 		}
 	}
 	return videos;
 };
 
-let videos = getVideos(document.getElementsByTagName('video'));
-let toolTipParent = (videos.length > 0) ? videos[0] : null;
+let videos = [];
+let firstVideo = null;
 let videoSearchers = [];
 
-if (toolTipParent != null) {
+chrome.runtime.onMessage.addListener(fHandlePopupOrBackgroundMessage);
+chrome.runtime.onMessage.addListener(fHandleErrorMessage);
 
-	for (let i = 0; i < videos.length; ++i) {
-		videoSearchers.push(new VideoDetection(videos[i], i));
+fUpdateSettings(function () {
+	if (gSettings.resetmouseoffset) {
+		gSettings.offsetx = 0;
+		gSettings.offsety = 0;
+		chrome.storage.sync.set({ offsety: 0, offsetx: 0 }, function () { });
 	}
 
-	let link = document.createElement('link');
-	link.href = chrome.extension.getURL('') + 'content_script.css';
-	link.rel = 'stylesheet';
-	document.head.appendChild(link);
-
-	let icons = document.createElement('link');
-	icons.href = chrome.extension.getURL('') + 'css/materialdesignicons.min.css';
-	icons.media = "all";
-	icons.rel = 'stylesheet';
-	document.head.appendChild(icons);
-
-	UpdateSettings(function () {
-		if (gSettings.resetmouseoffset) {
-			gSettings.offsetx = 0;
-			gSettings.offsety = 0;
-			chrome.storage.sync.set({ offsety: 0, offsetx: 0 }, function () { });
+	videos = fGetVideos(document.getElementsByTagName('video'));
+	if (videos.length>0)
+	{
+		firstVideo = videos[0];
+		for (let i = 0; i < videos.length; ++i) {
+			videoSearchers.push(new VideoDetection(videos[i], i));
 		}
-		chrome.runtime.onMessage.addListener(handlePopupOrBackgroundMessage);
+	
+		let link = document.createElement('link');
+		link.href = chrome.extension.getURL('') + 'content_script.css';
+		link.rel = 'stylesheet';
+		document.head.appendChild(link);
+	
+		let icons = document.createElement('link');
+		icons.href = chrome.extension.getURL('') + 'css/materialdesignicons.min.css';
+		icons.media = "all";
+		icons.rel = 'stylesheet';
+		document.head.appendChild(icons);
+	
 		chrome.runtime.sendMessage({ cmd: "onload" });
-	});
-
-	chrome.storage.onChanged.addListener(function (changes, namespace) {
-		UpdateSettings();
-	});
-}
-else {
-	chrome.runtime.onMessage.addListener(handleErrorMessage);
-}
+		chrome.storage.onChanged.addListener(function (changes, namespace) {
+			fUpdateSettings();
+		});
+	}
+});
 

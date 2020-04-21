@@ -43,7 +43,7 @@ public:
         rv.set("name", val(match.myDatabaseCard->myCardName));
         rv.set("id", val(match.myDatabaseCard->myCardId));
         rv.set("score", val((int)match.myScore[0]));
-        rv.set("set", val(match.myDatabaseCard->mySetCode));
+        rv.set("setcode", val(match.myDatabaseCard->mySetCode));
         rv.set("url", val(match.myDatabaseCard->myImgCoreUrl));
         
         // The rectangle in the image where the card was found

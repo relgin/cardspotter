@@ -1,6 +1,7 @@
 
 var defaultSettings = {
 	debugview: false,
+	multivideo : false,
 	mousemode: "click",
 	mousemodeenabled: true,
 	mouseanchor : false,

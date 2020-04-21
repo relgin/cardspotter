@@ -2,7 +2,7 @@
    "browser_specific_settings":	{"gecko":{"id": "jonas@cardspotter.com"	}},
    "background": {
       "persistent": true,
-      "scripts": [ "background.js" ]
+      "scripts": [ "background.js", "worker_proxy.js" ]
    },
    "browser_action": {
       "default_icon": "csLogo128.png",
@@ -23,6 +23,6 @@
    "permissions": [ "storage", "activeTab" ],
    "short_name": "CardSpotter",
    "version": "VERSION",
-	"web_accessible_resources": [ "content_script.css", "content_script.js", "options.js", "options.html", "css/materialdesignicons.min.css", "images/*","fonts/*", "csLogo16.png", "cardspottername.png" ]
+	"web_accessible_resources": [ "worker_proxy.html", "content_script.css", "worker.js", "cardspotter.js", "magic.db", "cardspotter.wasm", "content_script.js", "options.js", "options.html", "css/materialdesignicons.min.css", "images/*","fonts/*", "csLogo16.png", "cardspottername.png" ]
 }
 

@@ -27,6 +27,7 @@ function save_options() {
 	
   chrome.storage.sync.set({
     debugview: document.getElementById('debugview').checked,
+    multivideo: document.getElementById('multivideo').checked,
 	mousemode : document.getElementById('mousemode').value,
 	mouseanchor : document.getElementById('mouseanchor').checked,
 	vertical : document.getElementById('vertical').value,
@@ -71,7 +72,8 @@ function save_options() {
 
 function setDocumentValues(items)
 {
-		document.getElementById('debugview').checked 			= items.debugview;
+	document.getElementById('debugview').checked 			= items.debugview;
+	document.getElementById('multivideo').checked 			= items.multivideo;
     document.getElementById('mousemode').value 				= items.mousemode;
     document.getElementById('mouseanchor').checked 			= items.mouseanchor;
     document.getElementById('vertical').value 				= items.vertical;
