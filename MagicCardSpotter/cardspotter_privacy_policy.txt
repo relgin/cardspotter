@@ -1,10 +1,7 @@
 CardSpotter Privacy Policy
 
-When CardSpotter is enabled it injects a content script into all frames, this is done to handle videos embedded in iframes. This content script will look for key words in the page meta to automatically configure itself.
+When enabled CardSpotter injects code into the current web page that reads the content of HTML5 videos. It is either extracted automatically for automatic tooltips or on demand for the click mode. This video data is processed locally to extract subsections of the image which are then matched vs a local database of image hashes. If there is a match the corresponding image url for the https://www.scryfall.com image database is used to fetch a large image.
 
-CardSpotter uses video data to figure out what card you click on. For the card it thinks you clicked on it will request price information from www.cardhoarder.com and www.tcgplayer.com as well as an image from www.cardspotter.com. These webhosts may all collect information about you such as your web browser, the url CardSpotter was injected into, the url that was requested from them, your IP address and geolocation.
+CardSpotter also uses chrome.storage to store user settings.
 
-CardSpotter will periodically sample the information about the requested images and what video they were requested to check correctness in an effort to improve the quality of the product.
-
-If any of this changes, this privacy policy will be changed to reflect that.
-February 2nd, 2017
+2020/09/02
