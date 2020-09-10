@@ -30,7 +30,8 @@ public:
     int LoadDatabase(std::string data)
     {
         gDatabase.LoadString(data.c_str());
-        return 1;
+        printf("CardDatabase loaded: %i cards.\n", gDatabase.myCardCount);
+       return 1;
     }
 
     void BuildResult(val& rv, const Match &match)

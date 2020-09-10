@@ -191,10 +191,10 @@ static bool DownloadScryfallPng(const CardData &cardData, char * fileName)
 		return true;
 
 	std::remove(fileName);
-	std::string url("https://img.scryfall.com/cards/png/");
+
+	std::string url("https://c1.scryfall.com/file/scryfall-cards/png/");
 	url += cardData.myImgCoreUrl;
 	url += ".png";
-	Sleep(3000);
 	if (CurlUrlToFile(fileName, url.c_str(), 10))
 	{
 		std::cout << "CURL :[" << cardData.mySetCode << "," << cardData.myCardId << "]" << cardData.myCardName << std::endl;
@@ -389,7 +389,12 @@ void ScryfallBuild()
 				for (auto cardIT = cardList.Begin(); cardIT != cardList.End(); ++cardIT)
 				{
 					const auto& card = *cardIT;
-					const char* name = card["name"].GetString();
+					std::string cleanName = card["name"].GetString();
+					cleanName.erase(std::remove(cleanName.begin(), cleanName.end(), ','), cleanName.end());
+					cleanName.erase(std::remove(cleanName.begin(), cleanName.end(), '"'), cleanName.end());
+					cleanName.erase(std::remove(cleanName.begin(), cleanName.end(), '\''), cleanName.end());
+
+					const char* name = cleanName.c_str();
 					if (stricmp(code, "puma") == 0 && stricmp(name, "platinum emperion") == 0)
 					{
 						continue;

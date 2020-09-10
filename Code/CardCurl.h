@@ -54,16 +54,19 @@ static bool CurlUrlToFile(const char * outfilename, const char * url, int aTimeo
 	{
 		return false;
 	}
-	curl_easy_setopt(curl, CURLOPT_USERAGENT, "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.89 Safari/537.36");
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.83 Safari/537.36");
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, aTimeout);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlWriteFile);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, true);
 	// 		SetCurlProxy(curl);
 	res = curl_easy_perform(curl);
 	/* always cleanup */
 	curl_easy_cleanup(curl);
 	fclose(fp);
+
+	Sleep(1500);
 
 	return res == CURLcode::CURLE_OK;
 }

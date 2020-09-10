@@ -138,7 +138,7 @@ public:
 		OLD = 1 << 0,
 		BASIC = 1 << 1,
 		NEW = 1 << 2,
-		ALL = OLD | BASIC | NEW
+		EXTRAS = 1 << 3,
 	};
 
 	void Save(cv::FileStorage& fs) const;
