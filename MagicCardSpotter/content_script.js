@@ -193,7 +193,7 @@ class VideoDetection {
 				document.body.insertBefore(autocolor, document.body.firstChild);
 			}
 
-			let videoRect = this.GetVideoClientRect();
+			let videoRect = fGetVideoClientRect(this.video);
 			let areaWidth = gSettings.automatchwidth * videoRect.width;
 			let areaHeight = gSettings.automatchheight * videoRect.height;
 			let xStart = gSettings.automatchx * videoRect.width;
