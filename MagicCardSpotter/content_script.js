@@ -193,7 +193,7 @@ class VideoDetection {
 				document.body.insertBefore(autocolor, document.body.firstChild);
 			}
 
-			let videoRect = this.GetVideoClientRect();
+			let videoRect = fGetVideoClientRect(this.video);
 			let areaWidth = gSettings.automatchwidth * videoRect.width;
 			let areaHeight = gSettings.automatchheight * videoRect.height;
 			let xStart = gSettings.automatchx * videoRect.width;
@@ -902,6 +902,28 @@ function fShowResult(result) {
 		fCreateNameBar(tooltipDiv);
 	}
 
+	{
+		tooltipDiv.onmousedown = function (ed) {
+			let cachedOffsetX = gSettings.offsetx;
+			let cachedOffsetY = gSettings.offsety;
+			document.onmousemove = function (e) {
+				let dx = e.movementX;
+				let dy = e.movementY;
+				cachedOffsetX += dx;
+				cachedOffsetY += dy;
+				let transformScale = gSettings.detailsTargetWidth / cDetailsBaseWidth;
+				tooltipDiv.style.transform = "Translate(" + cachedOffsetX + "px," + cachedOffsetY + "px) Scale(" + transformScale.toString() + ")";
+			};
+			document.onmouseup = function () {
+				document.onmouseup = null;
+				document.onmousemove = null;
+				chrome.storage.sync.set({
+					offsetx: cachedOffsetX,
+					offsety: cachedOffsetY
+				}, function () { });
+			};
+		};
+	}
 	let imgEntry = fTooltipCreateBigImageLi();
 
 	if (id != undefined) {
@@ -994,26 +1016,6 @@ function fCreateNameBar(tooltipDiv) {
 	img.className = "CardSpotter";
 	img.id = "CardSpotterName";
 	entry.appendChild(img);
-	entry.onmousedown = function (ed) {
-		let cachedOffsetX = gSettings.offsetx;
-		let cachedOffsetY = gSettings.offsety;
-		document.onmousemove = function (e) {
-			let dx = e.movementX;
-			let dy = e.movementY;
-			cachedOffsetX += dx;
-			cachedOffsetY += dy;
-			let transformScale = gSettings.detailsTargetWidth / cDetailsBaseWidth;
-			tooltipDiv.style.transform = "Translate(" + cachedOffsetX + "px," + cachedOffsetY + "px) Scale(" + transformScale.toString() + ")";
-		};
-		document.onmouseup = function () {
-			document.onmouseup = null;
-			document.onmousemove = null;
-			chrome.storage.sync.set({
-				offsetx: cachedOffsetX,
-				offsety: cachedOffsetY
-			}, function () { });
-		};
-	};
 }
 
 function fGetClientToVideoScaleX(video) {

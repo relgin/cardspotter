@@ -394,16 +394,14 @@ void ScryfallBuild()
 					cleanName.erase(std::remove(cleanName.begin(), cleanName.end(), '"'), cleanName.end());
 					cleanName.erase(std::remove(cleanName.begin(), cleanName.end(), '\''), cleanName.end());
 
-					const char* name = cleanName.c_str();
-					if (stricmp(code, "puma") == 0 && stricmp(name, "platinum emperion") == 0)
-					{
-						continue;
-					}
-					if (stricmp(code, "puma") == 0 && stricmp(name, "vengevine") == 0)
-					{
-						continue;
-					}
+					const char* cardId = card["collector_number"].GetString();
 
+// 					if (stricmp(code, "iko") == 0 && stricmp(cardId, "309") == 0)
+// 					{
+// 						std::cout << " THA CARD";
+// 					}
+
+					const char* name = cleanName.c_str();
 					const char* layout = card["layout"].GetString();
 					if (stricmp(layout, "scheme") == 0)
 					{
@@ -417,7 +415,7 @@ void ScryfallBuild()
 					}
 
 					const char* border_color = card["border_color"].GetString();
-					if (stricmp(border_color, "black") != 0)
+					if (stricmp(border_color, "black") != 0 && stricmp(border_color, "borderless") != 0)
 					{
 						continue;
 					}
@@ -442,7 +440,7 @@ void ScryfallBuild()
 					if (card["image_uris"].Size())
 					{
 						CardData cData;
-						cData.myCardId = card["collector_number"].GetString();
+						cData.myCardId = cardId;
 						cData.myCardName = name;
 						cData.mySetCode = code;
 						cData.myFormat = oldNewBasic;
@@ -455,7 +453,7 @@ void ScryfallBuild()
 						if (card_faces.Size())
 						{
 							CardData sideA;
-							sideA.myCardId = card["collector_number"].GetString();
+							sideA.myCardId = cardId;
 							sideA.myCardName = name;
 							sideA.mySetCode = code;
 							sideA.myFormat = oldNewBasic;
