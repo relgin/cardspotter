@@ -22,6 +22,6 @@
    "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
    "permissions": [ "storage", "activeTab" ],
    "short_name": "CardSpotter",
-   "version": "3.14",
+   "version": "3.15",
 	"web_accessible_resources": [ "worker_proxy.html", "content_script.css", "worker.js", "cardspotter.js", "magic.db", "cardspotter.wasm", "content_script.js", "options.js", "options.html", "css/materialdesignicons.min.css", "images/*","fonts/*", "csLogo16.png", "cardspottername.png" ]
 }
